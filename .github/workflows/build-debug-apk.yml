@@ -8,6 +8,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: date_time_widget
 
     steps:
       - name: Checkout code
@@ -31,6 +34,12 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      - name: Analyze code
+        run: flutter analyze
+
+      - name: Run tests
+        run: flutter test
+
       - name: Build debug APK (Gradle)
         run: flutter build apk --debug
 
@@ -38,5 +47,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: debug-apk
-          path: build/app/outputs/flutter-apk/app-debug.apk
+          path: date_time_widget/build/app/outputs/flutter-apk/app-debug.apk
           retention-days: 7
