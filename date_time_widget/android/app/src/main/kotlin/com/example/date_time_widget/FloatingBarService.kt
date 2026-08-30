@@ -325,7 +325,7 @@ class FloatingBarService : Service() {
                     "${localeMonth ?: monthShort[month]} $dayOfMonth"
                 }
                 else -> {
-                    val localeMonth = cal.getDisplayName(Calendar.MONTH, Locale.SHORT, Locale.getDefault())
+                    val localeMonth = cal.getDisplayName(Calendar.MONTH, java.text.DateFormat.SHORT, Locale.getDefault())
                     "${pad(dayOfMonth)} ${localeMonth ?: monthShort[month]}"
                 }
             }
