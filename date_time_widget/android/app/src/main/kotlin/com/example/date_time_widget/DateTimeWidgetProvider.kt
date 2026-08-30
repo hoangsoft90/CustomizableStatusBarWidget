@@ -77,20 +77,9 @@ class DateTimeWidgetProvider : AppWidgetProvider() {
             views.setTextViewTextSize(R.id.widget_date, android.util.TypedValue.COMPLEX_UNIT_SP, baseSize * 0.4f)
             views.setTextViewTextSize(R.id.widget_time, android.util.TypedValue.COMPLEX_UNIT_SP, baseSize)
 
-            // #4: Apply alignment via layout gravity (API 31+)
-            val gravity = when (config.alignment) {
-                "left" -> android.view.Gravity.START or android.view.Gravity.CENTER_VERTICAL
-                "right" -> android.view.Gravity.END or android.view.Gravity.CENTER_VERTICAL
-                else -> android.view.Gravity.CENTER or android.view.Gravity.CENTER_VERTICAL
-            }
-            try {
-                // setViewLayoutGravity requires API 31 (Android 12)
-                views.setViewLayoutGravity(R.id.widget_day, gravity)
-                views.setViewLayoutGravity(R.id.widget_date, gravity)
-                views.setViewLayoutGravity(R.id.widget_time, gravity)
-            } catch (_: Exception) {
-                // Pre-API 31: alignment not supported via RemoteViews
-            }
+            // #4: Alignment — RemoteViews does not support layout gravity.
+            // Alignment is applied on the Floating Bar (native View) and
+            // in the Flutter ClockPreview. Widget layout uses CENTER by default.
 
             // Tap to open app → Editor screen
             val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
