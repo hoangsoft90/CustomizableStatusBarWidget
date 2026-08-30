@@ -11,9 +11,7 @@ import android.content.SharedPreferences
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.os.Build
-import android.os.Handler
 import android.os.IBinder
-import android.os.Looper
 import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
@@ -65,11 +63,21 @@ class FloatingBarService : Service() {
             context.stopService(Intent(context, FloatingBarService::class.java))
         }
 
-        /** #8: Update in-place — no stop/start cycle. Just notify the service to refresh. */
+        /** #8: Update in-place — no stop/start cycle. */
         fun update(context: Context) {
             if (!isEnabled(context)) return
-            // The running service instance will pick up changes on next tick.
-            // For immediate update, send a broadcast or let the service handler deal with it.
+            sendUpdateIntent(context)
+        }
+
+        /** Called by TimeTickService — update overlay in-place. */
+        fun updateOverlay(context: Context) {
+            if (!isEnabled(context)) return
+            try {
+                sendUpdateIntent(context)
+            } catch (_: Exception) { }
+        }
+
+        private fun sendUpdateIntent(context: Context) {
             val intent = Intent(context, FloatingBarService::class.java).apply {
                 action = "UPDATE_OVERLAY"
             }
@@ -78,23 +86,6 @@ class FloatingBarService : Service() {
             } else {
                 context.startService(intent)
             }
-        }
-
-        /** Called by TimeTickService and other services — update overlay in-place if running. */
-        fun updateOverlay(context: Context) {
-            if (!isEnabled(context)) return
-            // The service's handler will update on its next cycle
-            // For immediate update, try to find the running instance
-            val intent = Intent(context, FloatingBarService::class.java).apply {
-                action = "UPDATE_OVERLAY"
-            }
-            try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    context.startForegroundService(intent)
-                } else {
-                    context.startService(intent)
-                }
-            } catch (_: Exception) { }
         }
 
         /** Called by MainActivity when Flutter sends config JSON via MethodChannel. */
@@ -119,7 +110,6 @@ class FloatingBarService : Service() {
 
     private var windowManager: WindowManager? = null
     private var overlayView: View? = null
-    private val handler = Handler(Looper.getMainLooper())
 
     // ── Service lifecycle ────────────────────────────────────
 
@@ -280,15 +270,6 @@ class FloatingBarService : Service() {
     private fun updateOverlay() {
         val view = overlayView as? LinearLayout ?: return
         updateBarContent(view)
-
-        // #4: Also update alignment if config changed
-        val config = readConfig()
-        val layoutGravity = when (config.alignment) {
-            "left" -> Gravity.START or Gravity.CENTER_VERTICAL
-            "right" -> Gravity.END or Gravity.CENTER_VERTICAL
-            else -> Gravity.CENTER or Gravity.CENTER_VERTICAL
-        }
-        view.gravity = layoutGravity
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -376,6 +357,14 @@ class FloatingBarService : Service() {
         dayText.text = day
         dateText.text = date
         timeText.text = time
+
+        // #4: Update alignment from config (reads config once, applies here)
+        val layoutGravity = when (config.alignment) {
+            "left" -> Gravity.START or Gravity.CENTER_VERTICAL
+            "right" -> Gravity.END or Gravity.CENTER_VERTICAL
+            else -> Gravity.CENTER or Gravity.CENTER_VERTICAL
+        }
+        layout.gravity = layoutGravity
     }
 
     private fun pad(n: Int) = n.toString().padStart(2, '0')

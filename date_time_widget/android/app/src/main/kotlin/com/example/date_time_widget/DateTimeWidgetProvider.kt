@@ -77,20 +77,19 @@ class DateTimeWidgetProvider : AppWidgetProvider() {
             views.setTextViewTextSize(R.id.widget_date, android.util.TypedValue.COMPLEX_UNIT_SP, baseSize * 0.4f)
             views.setTextViewTextSize(R.id.widget_time, android.util.TypedValue.COMPLEX_UNIT_SP, baseSize)
 
-            // #4: Apply alignment
+            // #4: Apply alignment via layout gravity (API 31+)
             val gravity = when (config.alignment) {
                 "left" -> android.view.Gravity.START or android.view.Gravity.CENTER_VERTICAL
                 "right" -> android.view.Gravity.END or android.view.Gravity.CENTER_VERTICAL
                 else -> android.view.Gravity.CENTER or android.view.Gravity.CENTER_VERTICAL
             }
             try {
-                // Use viewLayoutDirection for newer RemoteViews API
-                views.setViewLayoutDirection(R.id.widget_day, gravity)
+                // setViewLayoutGravity requires API 31 (Android 12)
+                views.setViewLayoutGravity(R.id.widget_day, gravity)
+                views.setViewLayoutGravity(R.id.widget_date, gravity)
+                views.setViewLayoutGravity(R.id.widget_time, gravity)
             } catch (_: Exception) {
-                // Fallback: set alignment on time (most visible)
-                try {
-                    views.setViewLayoutDirection(R.id.widget_time, gravity)
-                } catch (_: Exception) { }
+                // Pre-API 31: alignment not supported via RemoteViews
             }
 
             // Tap to open app → Editor screen
@@ -236,14 +235,6 @@ class DateTimeWidgetProvider : AppWidgetProvider() {
         for (id in appWidgetIds) {
             renderWidget(context, appWidgetManager, id)
         }
-    }
-
-    override fun onEnabled(context: Context) {
-        super.onEnabled(context)
-    }
-
-    override fun onDisabled(context: Context) {
-        super.onDisabled(context)
     }
 
     // ── Data classes ────────────────────────────────────────
