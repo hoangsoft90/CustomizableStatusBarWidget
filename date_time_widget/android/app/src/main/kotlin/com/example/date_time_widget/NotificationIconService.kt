@@ -8,6 +8,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.graphics.Bitmap
+import androidx.core.graphics.drawable.IconCompat
 import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Typeface
@@ -132,8 +133,10 @@ object NotificationIconService {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val iconCompat = IconCompat.createWithBitmap(smallIcon)
+
         return NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(smallIcon)
+            .setSmallIcon(iconCompat)
             .setLargeIcon(createDayBitmap(dayNumber)) // same for large icon
             .setContentTitle(fullDate)
             .setContentText(time)

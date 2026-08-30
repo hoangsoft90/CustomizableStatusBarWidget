@@ -36,8 +36,51 @@ class DateTimeWidgetProvider : AppWidgetProvider() {
             val mgr = AppWidgetManager.getInstance(context)
             val ids = mgr.getAppWidgetIds(ComponentName(context, DateTimeWidgetProvider::class.java))
             for (id in ids) {
-                updateOneWidget(context, mgr, id)
+                renderWidget(context, mgr, id)
             }
+        }
+
+        private fun renderWidget(
+            context: Context,
+            mgr: AppWidgetManager,
+            widgetId: Int,
+        ) {
+            val config = readConfig(context)
+            val layoutId = chooseLayout(context, widgetId, mgr)
+            val views = RemoteViews(context.packageName, layoutId)
+
+            val now = Calendar.getInstance()
+            val display = formatDisplay(now, config)
+
+            views.setTextViewText(R.id.widget_day, display.day)
+            views.setTextViewText(R.id.widget_date, display.date)
+            views.setTextViewText(R.id.widget_time, display.time)
+
+            // Apply user color
+            val color = parseColor(config.color)
+            views.setTextColor(R.id.widget_day, color)
+            views.setTextColor(R.id.widget_date, color and 0xDDFFFFFF.toInt())
+            views.setTextColor(R.id.widget_time, color)
+
+            // Apply font sizes (scaled proportionally per layout)
+            val baseSize = config.fontSize.toFloat()
+            views.setTextViewTextSize(R.id.widget_day, android.util.TypedValue.COMPLEX_UNIT_SP, baseSize * 0.45f)
+            views.setTextViewTextSize(R.id.widget_date, android.util.TypedValue.COMPLEX_UNIT_SP, baseSize * 0.4f)
+            views.setTextViewTextSize(R.id.widget_time, android.util.TypedValue.COMPLEX_UNIT_SP, baseSize)
+
+            // Tap to open app → Editor screen
+            val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
+            if (launchIntent != null) {
+                launchIntent.putExtra("open_editor", true)
+                launchIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                val pi = PendingIntent.getActivity(
+                    context, widgetId, launchIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                views.setOnClickPendingIntent(R.id.widget_root, pi)
+            }
+
+            mgr.updateAppWidget(widgetId, views)
         }
 
         /** Schedule the next alarm (60 s from now). */
@@ -96,51 +139,6 @@ class DateTimeWidgetProvider : AppWidgetProvider() {
     }
 
     // ── Render one widget ───────────────────────────────────
-
-    private fun updateOneWidget(
-        context: Context,
-        mgr: AppWidgetManager,
-        widgetId: Int,
-    ) {
-        val config = readConfig(context)
-        val layoutId = chooseLayout(context, widgetId, mgr)
-        val views = RemoteViews(context.packageName, layoutId)
-
-        val now = Calendar.getInstance()
-        val display = formatDisplay(now, config)
-
-        views.setTextViewText(R.id.widget_day, display.day)
-        views.setTextViewText(R.id.widget_date, display.date)
-        views.setTextViewText(R.id.widget_time, display.time)
-
-        // Apply user color
-        val color = parseColor(config.color)
-        views.setTextColor(R.id.widget_day, color)
-        views.setTextColor(R.id.widget_date, color and 0xDDFFFFFF.toInt())
-        views.setTextColor(R.id.widget_time, color)
-
-        // Apply font sizes (scaled proportionally per layout)
-        val baseSize = config.fontSize.toFloat()
-        views.setTextViewTextSize(R.id.widget_day, android.util.TypedValue.COMPLEX_UNIT_SP, baseSize * 0.45f)
-        views.setTextViewTextSize(R.id.widget_date, android.util.TypedValue.COMPLEX_UNIT_SP, baseSize * 0.4f)
-        views.setTextViewTextSize(R.id.widget_time, android.util.TypedValue.COMPLEX_UNIT_SP, baseSize)
-
-        // Tap to open app → Editor screen
-        val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
-        if (launchIntent != null) {
-            launchIntent.putExtra("open_editor", true)
-            launchIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            val pi = PendingIntent.getActivity(
-                context, widgetId, launchIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-            views.setOnClickPendingIntent(R.id.widget_time, pi)
-            views.setOnClickPendingIntent(R.id.widget_day, pi)
-            views.setOnClickPendingIntent(R.id.widget_date, pi)
-        }
-
-        mgr.updateAppWidget(widgetId, views)
-    }
 
     /** Pick layout based on widget cell size. */
     private fun chooseLayout(

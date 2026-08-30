@@ -215,14 +215,14 @@ class FloatingBarService : Service() {
 
         val dayText = TextView(this).apply {
             setTextColor(textColor)
-            textSize = config.fontSize * 0.35f
+            textSize = config.fontSize.toFloat() * 0.35f
             setSingleLine(true)
             id = View.generateViewId()
         }
 
         val dateText = TextView(this).apply {
             setTextColor(textColor and 0xDDFFFFFF.toInt())
-            textSize = config.fontSize * 0.3f
+            textSize = config.fontSize.toFloat() * 0.3f
             setSingleLine(true)
             setPadding(dp(8), 0, 0, 0)
             id = View.generateViewId()
@@ -230,7 +230,7 @@ class FloatingBarService : Service() {
 
         val timeText = TextView(this).apply {
             setTextColor(textColor)
-            textSize = config.fontSize * 0.4f
+            textSize = config.fontSize.toFloat() * 0.4f
             setSingleLine(true)
             setPadding(dp(8), 0, 0, 0)
             typeface = android.graphics.Typeface.DEFAULT_BOLD
