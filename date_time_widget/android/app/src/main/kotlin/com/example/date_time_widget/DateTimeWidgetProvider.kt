@@ -158,12 +158,12 @@ class DateTimeWidgetProvider : AppWidgetProvider() {
         private fun parseColor(hex: String): Int {
             return try {
                 val clean = hex.removePrefix("#")
-                val argb = when (clean.length) {
+                val hexStr: String = when (clean.length) {
                     6 -> "FF$clean"
                     8 -> clean
                     else -> "FFFFFFFF"
                 }
-                    .toLong(16).toInt()
+                hexStr.toLong(16).toInt()
             } catch (_: Exception) {
                 0xFFFFFFFF.toInt()
             }
