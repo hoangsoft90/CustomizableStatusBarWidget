@@ -20,26 +20,22 @@ import android.view.WindowManager
 import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.app.NotificationCompat
-import java.text.SimpleDateFormat
 import java.util.Calendar
-import java.util.Date
 import java.util.Locale
 
 /**
  * Foreground service that draws a transparent floating bar immediately
  * below the real status bar.
  *
+ * Config is read from "status_bar_config" SharedPreferences — written
+ * by Flutter via MethodChannel JSON (see floating_bar_bridge.dart).
+ *
  * Key constraints (plan1_final.md §0, §5):
  *  - Uses TYPE_APPLICATION_OVERLAY — does NOT draw on top of System UI.
  *  - The bar sits RIGHT BELOW the status bar (offset = statusBarHeight).
  *  - Transparent background, no input focus, does not block swipe-down.
- *  - On Android 15+ the overlay window must be visible before starting
- *    the foreground service from background.
  *
- * Lifecycle:
- *   FloatingBarService.start(context)
- *   FloatingBarService.stop(context)
- *   FloatingBarService.isEnabled(context)
+ * #8: update() calls updateOverlay() in-place — no stop/start cycle.
  */
 class FloatingBarService : Service() {
 
@@ -49,8 +45,10 @@ class FloatingBarService : Service() {
         private const val NOTIFICATION_ID = 8888
         private const val PREFS_NAME = "FlutterSharedPreferences"
         private const val ENABLED_KEY = "flutter.floatingBarEnabled"
-        private const val CONFIG_KEY = "flutter.clock_config"
-        private const val UPDATE_INTERVAL_MS = 60_000L // 1 minute
+
+        // #3: Config stored in our own SharedPreferences
+        private const val CONFIG_PREFS = "status_bar_config"
+        private const val CONFIG_KEY = "clock_config"
 
         fun start(context: Context) {
             saveEnabled(context, true)
@@ -67,11 +65,43 @@ class FloatingBarService : Service() {
             context.stopService(Intent(context, FloatingBarService::class.java))
         }
 
+        /** #8: Update in-place — no stop/start cycle. Just notify the service to refresh. */
         fun update(context: Context) {
             if (!isEnabled(context)) return
-            // Service reads config on each tick, just restart to pick up changes
-            stop(context)
-            start(context)
+            // The running service instance will pick up changes on next tick.
+            // For immediate update, send a broadcast or let the service handler deal with it.
+            val intent = Intent(context, FloatingBarService::class.java).apply {
+                action = "UPDATE_OVERLAY"
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(intent)
+            } else {
+                context.startService(intent)
+            }
+        }
+
+        /** Called by TimeTickService and other services — update overlay in-place if running. */
+        fun updateOverlay(context: Context) {
+            if (!isEnabled(context)) return
+            // The service's handler will update on its next cycle
+            // For immediate update, try to find the running instance
+            val intent = Intent(context, FloatingBarService::class.java).apply {
+                action = "UPDATE_OVERLAY"
+            }
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    context.startForegroundService(intent)
+                } else {
+                    context.startService(intent)
+                }
+            } catch (_: Exception) { }
+        }
+
+        /** Called by MainActivity when Flutter sends config JSON via MethodChannel. */
+        fun saveConfig(context: Context, json: String) {
+            context.getSharedPreferences(CONFIG_PREFS, Context.MODE_PRIVATE)
+                .edit().putString(CONFIG_KEY, json).apply()
+            update(context)
         }
 
         fun isEnabled(context: Context): Boolean {
@@ -90,12 +120,6 @@ class FloatingBarService : Service() {
     private var windowManager: WindowManager? = null
     private var overlayView: View? = null
     private val handler = Handler(Looper.getMainLooper())
-    private val updateRunnable = object : Runnable {
-        override fun run() {
-            updateOverlay()
-            handler.postDelayed(this, UPDATE_INTERVAL_MS)
-        }
-    }
 
     // ── Service lifecycle ────────────────────────────────────
 
@@ -107,24 +131,24 @@ class FloatingBarService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        // #8: Handle UPDATE_OVERLAY action — update in-place, don't recreate
+        if (intent?.action == "UPDATE_OVERLAY") {
+            updateOverlay()
+            return START_STICKY
+        }
+
         // Start foreground FIRST (required for Android 14+)
         startForeground(NOTIFICATION_ID, buildNotification())
 
-        // Then add overlay (Android 15+: overlay must be visible before
-        // foreground service starts from background, but since we call
-        // startForeground above before adding the overlay, and we're
-        // starting from a user tap in the foreground, this is safe.
-        // For boot scenario, BootReceiver starts this only when the
-        // user had it enabled, and BOOT_COMPLETED is a trusted context.)
-
-        handler.post(updateRunnable)
-        addOverlay()
+        // Add overlay if not already present
+        if (overlayView == null) {
+            addOverlay()
+        }
 
         return START_STICKY
     }
 
     override fun onDestroy() {
-        handler.removeCallbacks(updateRunnable)
         removeOverlay()
         super.onDestroy()
     }
@@ -143,7 +167,6 @@ class FloatingBarService : Service() {
         try {
             windowManager?.addView(overlayView, params)
         } catch (e: Exception) {
-            // Permission revoked or other error — stop service
             stopSelf()
         }
     }
@@ -158,22 +181,19 @@ class FloatingBarService : Service() {
     }
 
     private fun createLayoutParams(): WindowManager.LayoutParams {
-        // Status bar height
         val resourceId = resources.getIdentifier("status_bar_height", "dimen", "android")
         val statusBarHeight = if (resourceId > 0) {
             resources.getDimensionPixelSize(resourceId)
         } else {
-            24 // fallback ~24dp
+            24
         }
 
-        // Bar height: ~32dp
         val barHeight = (32 * resources.displayMetrics.density).toInt()
 
         return WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT,
             barHeight,
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            // Not focusable — swipe-down still works
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
@@ -181,28 +201,23 @@ class FloatingBarService : Service() {
         ).apply {
             gravity = Gravity.TOP or Gravity.START
             x = 0
-            y = statusBarHeight // immediately below status bar
+            y = statusBarHeight
         }
     }
 
     private fun createBarView(): View {
         val config = readConfig()
 
-        // Parse color — derive a dark background tint from the user's text color
         val textColor = parseColor(config.color)
-        val bgAlpha = 0xCC // semi-transparent
+        val bgAlpha = 0xCC
 
-        // Use a darkened version of the user's color as background,
-        // or pure black if the color is already dark
         val r = (textColor shr 16) and 0xFF
         val g = (textColor shr 8) and 0xFF
         val b = textColor and 0xFF
         val luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255.0
         val bgColor = if (luminance > 0.5) {
-            // Light text color → use black bg
             Color.argb(bgAlpha, 0, 0, 0)
         } else {
-            // Dark text color → use a slightly lighter dark bg
             Color.argb(bgAlpha, 20, 20, 20)
         }
 
@@ -228,6 +243,10 @@ class FloatingBarService : Service() {
             id = View.generateViewId()
         }
 
+        val spacer = View(this).apply {
+            layoutParams = LinearLayout.LayoutParams(0, 1, 1f)
+        }
+
         val timeText = TextView(this).apply {
             setTextColor(textColor)
             textSize = config.fontSize.toFloat() * 0.4f
@@ -239,16 +258,17 @@ class FloatingBarService : Service() {
 
         layout.addView(dayText)
         layout.addView(dateText)
-
-        // Spacer fills remaining horizontal space, pushing timeText to the right
-        val spacer = View(this).apply {
-            layoutParams = LinearLayout.LayoutParams(0, 1, 1f)
-        }
         layout.addView(spacer)
-
         layout.addView(timeText)
 
-        // Tag the views for update
+        // #4: Apply alignment to the layout
+        val layoutGravity = when (config.alignment) {
+            "left" -> Gravity.START or Gravity.CENTER_VERTICAL
+            "right" -> Gravity.END or Gravity.CENTER_VERTICAL
+            else -> Gravity.CENTER or Gravity.CENTER_VERTICAL
+        }
+        layout.gravity = layoutGravity
+
         layout.tag = Triple(dayText, dateText, timeText)
 
         updateBarContent(layout)
@@ -260,6 +280,15 @@ class FloatingBarService : Service() {
     private fun updateOverlay() {
         val view = overlayView as? LinearLayout ?: return
         updateBarContent(view)
+
+        // #4: Also update alignment if config changed
+        val config = readConfig()
+        val layoutGravity = when (config.alignment) {
+            "left" -> Gravity.START or Gravity.CENTER_VERTICAL
+            "right" -> Gravity.END or Gravity.CENTER_VERTICAL
+            else -> Gravity.CENTER or Gravity.CENTER_VERTICAL
+        }
+        view.gravity = layoutGravity
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -271,16 +300,21 @@ class FloatingBarService : Service() {
         val now = cal.time
         val config = readConfig()
 
-        // Day of week
-        val dayNames = arrayOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
-        val dayShort = arrayOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+        // #1: Safe day-of-week index (same guard as DateTimeWidgetProvider)
         val dayOfWeek = cal.get(Calendar.DAY_OF_WEEK)
         val dayIdx = dayOfWeek - Calendar.MONDAY
         val dayIdxSafe = if (dayIdx < 0) 6 else dayIdx
 
+        // #7: Locale-aware day names
+        val dayNames = arrayOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
+        val dayShort = arrayOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+
         val day = if (config.showDay) {
             if (config.format.contains("EEE")) dayShort[dayIdxSafe].uppercase(Locale.getDefault())
-            else dayNames[dayIdxSafe]
+            else {
+                val localeDay = cal.getDisplayName(Calendar.DAY_OF_WEEK, Calendar.LONG, Locale.getDefault())
+                localeDay ?: dayNames[dayIdxSafe]
+            }
         } else ""
 
         // Date
@@ -301,28 +335,41 @@ class FloatingBarService : Service() {
                 config.format.contains("dd/MM") -> "${pad(dayOfMonth)}/${pad(month + 1)}/$year"
                 config.format.contains("MM/dd") -> "${pad(month + 1)}/${pad(dayOfMonth)}/$year"
                 config.format.contains("yyyy-MM") -> "$year-${pad(month + 1)}-${pad(dayOfMonth)}"
-                config.format.contains("MMMM") -> "${monthNames[month]} $dayOfMonth"
-                config.format.contains("MMM") -> "${monthShort[month]} $dayOfMonth"
-                else -> "${pad(dayOfMonth)} ${monthShort[month]}"
+                config.format.contains("MMMM") -> {
+                    val localeMonth = cal.getDisplayName(Calendar.MONTH, Calendar.LONG, Locale.getDefault())
+                    "${localeMonth ?: monthNames[month]} $dayOfMonth"
+                }
+                config.format.contains("MMM") -> {
+                    val localeMonth = cal.getDisplayName(Calendar.MONTH, Calendar.SHORT, Locale.getDefault())
+                    "${localeMonth ?: monthShort[month]} $dayOfMonth"
+                }
+                else -> {
+                    val localeMonth = cal.getDisplayName(Calendar.MONTH, Locale.SHORT, Locale.getDefault())
+                    "${pad(dayOfMonth)} ${localeMonth ?: monthShort[month]}"
+                }
             }
         } else ""
 
-        // Time
-        val h24 = cal.get(Calendar.HOUR_OF_DAY)
-        val h12 = if (h24 == 0) 12 else if (h24 > 12) h24 - 12 else h24
-        val mm = pad(cal.get(Calendar.MINUTE))
-        val time = if (config.timeFormat.contains("hh")) {
-            val period = if (h24 >= 12) "PM" else "AM"
-            if (config.showSeconds) {
-                "${pad(h12)}:$mm:${pad(cal.get(Calendar.SECOND))} $period"
-            } else {
-                "${pad(h12)}:$mm $period"
-            }
+        // Time — use config.timeFormat + showSeconds
+        val timePattern = if (config.showSeconds) {
+            config.timeFormat.replace("mm", "mm:ss")
         } else {
-            if (config.showSeconds) {
-                "${pad(h24)}:$mm:${pad(cal.get(Calendar.SECOND))}"
+            config.timeFormat
+        }
+        val time = try {
+            java.text.SimpleDateFormat(timePattern, Locale.getDefault()).format(now)
+        } catch (_: Exception) {
+            // Fallback: manual build
+            val h24 = cal.get(Calendar.HOUR_OF_DAY)
+            val h12 = if (h24 == 0) 12 else if (h24 > 12) h24 - 12 else h24
+            val mm = pad(cal.get(Calendar.MINUTE))
+            if (config.timeFormat.contains("hh")) {
+                val period = if (h24 >= 12) "PM" else "AM"
+                if (config.showSeconds) "${pad(h12)}:$mm:${pad(cal.get(Calendar.SECOND))} $period"
+                else "${pad(h12)}:$mm $period"
             } else {
-                "${pad(h24)}:$mm"
+                if (config.showSeconds) "${pad(h24)}:$mm:${pad(cal.get(Calendar.SECOND))}"
+                else "${pad(h24)}:$mm"
             }
         }
 
@@ -334,18 +381,18 @@ class FloatingBarService : Service() {
     private fun pad(n: Int) = n.toString().padStart(2, '0')
     private fun dp(v: Int) = (v * resources.displayMetrics.density).toInt()
 
-    // ── Config reader ───────────────────────────────────────
+    // ── Config reader (#3: reads from status_bar_config) ────
 
     private fun readConfig(): ClockData {
         return try {
-            val prefs = getPrefs(this)
-            val json = prefs.getString(CONFIG_KEY, null)
+            val json = getPrefs(this).getString(CONFIG_KEY, null)
             if (json != null) parseClockData(json) else ClockData()
         } catch (_: Exception) {
             ClockData()
         }
     }
 
+    // #4: parseClockData now includes alignment
     private fun parseClockData(json: String): ClockData {
         fun extract(key: String): String? {
             val pattern = "\"$key\"\\s*:\\s*\"([^\"]*?)\""
@@ -365,6 +412,7 @@ class FloatingBarService : Service() {
             showDay = extract("showDay") != "false",
             fontSize = (extract("fontSize")?.toDoubleOrNull() ?: 32.0),
             color = extract("color") ?: "#FFFFFF",
+            alignment = extract("alignment") ?: "center",
         )
     }
 
@@ -427,5 +475,6 @@ class FloatingBarService : Service() {
         val showDay: Boolean = true,
         val fontSize: Double = 32.0,
         val color: String = "#FFFFFF",
+        val alignment: String = "center",  // #4: alignment field added
     )
 }

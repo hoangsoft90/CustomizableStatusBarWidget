@@ -1,13 +1,10 @@
 package com.example.date_time_widget
 
-import android.app.AlarmManager
-import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.os.SystemClock
 import android.widget.RemoteViews
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -16,19 +13,16 @@ import java.util.Locale
 /**
  * Home-screen widget that displays day, date, and time.
  *
- * Config is read from FlutterSharedPreferences.xml — the same file
- * the Flutter shared_preferences plugin writes to.  Keys are prefixed
- * with "flutter." (e.g. "flutter.clock_config").
+ * Config is read from "status_bar_config" SharedPreferences — written
+ * by Flutter via MethodChannel JSON (see widget_bridge.dart).
  *
- * Updates every 60 s via AlarmManager AND on-demand when Flutter
- * sends a MethodChannel call (see widget_bridge.dart).
+ * Updates via TimeTickService (ACTION_TIME_TICK) — no AlarmManager needed.
  */
 class DateTimeWidgetProvider : AppWidgetProvider() {
 
     companion object {
-        private const val PREFS_NAME = "FlutterSharedPreferences"
-        private const val CONFIG_KEY = "flutter.clock_config"
-        private const val ACTION_TICK = "com.example.date_time_widget.TICK"
+        private const val CONFIG_PREFS = "status_bar_config"
+        private const val CONFIG_KEY = "clock_config"
 
         /** Force-update every widget instance right now. */
         fun updateAllWidgets(context: Context) {
@@ -39,18 +33,20 @@ class DateTimeWidgetProvider : AppWidgetProvider() {
             }
         }
 
-        /** Schedule the next alarm (60 s from now). */
-        fun scheduleNextAlarm(context: Context) {
-            val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-            val intent = Intent(context, DateTimeWidgetProvider::class.java).apply {
-                action = ACTION_TICK
-            }
-            val pi = PendingIntent.getBroadcast(
-                context, 0, intent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-            val next = SystemClock.elapsedRealtime() + 60_000
-            am.setExactAndAllowWhileIdle(AlarmManager.ELAPSED_REALTIME_WAKEUP, next, pi)
+        /** Called by TimeTickService on ACTION_TIME_TICK — updates all widgets + notification + floating bar. */
+        fun onTick(context: Context) {
+            updateAllWidgets(context)
+            NotificationIconService.update(context)
+            FloatingBarService.updateOverlay(context)
+        }
+
+        /** Called by MainActivity when Flutter sends config JSON via MethodChannel. */
+        fun saveConfig(context: Context, json: String) {
+            context.getSharedPreferences(CONFIG_PREFS, Context.MODE_PRIVATE)
+                .edit().putString(CONFIG_KEY, json).apply()
+            updateAllWidgets(context)
+            NotificationIconService.update(context)
+            FloatingBarService.updateOverlay(context)
         }
 
         private fun renderWidget(
@@ -81,14 +77,30 @@ class DateTimeWidgetProvider : AppWidgetProvider() {
             views.setTextViewTextSize(R.id.widget_date, android.util.TypedValue.COMPLEX_UNIT_SP, baseSize * 0.4f)
             views.setTextViewTextSize(R.id.widget_time, android.util.TypedValue.COMPLEX_UNIT_SP, baseSize)
 
+            // #4: Apply alignment
+            val gravity = when (config.alignment) {
+                "left" -> android.view.Gravity.START or android.view.Gravity.CENTER_VERTICAL
+                "right" -> android.view.Gravity.END or android.view.Gravity.CENTER_VERTICAL
+                else -> android.view.Gravity.CENTER or android.view.Gravity.CENTER_VERTICAL
+            }
+            try {
+                // Use viewLayoutDirection for newer RemoteViews API
+                views.setViewLayoutDirection(R.id.widget_day, gravity)
+            } catch (_: Exception) {
+                // Fallback: set alignment on time (most visible)
+                try {
+                    views.setViewLayoutDirection(R.id.widget_time, gravity)
+                } catch (_: Exception) { }
+            }
+
             // Tap to open app → Editor screen
             val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)
             if (launchIntent != null) {
                 launchIntent.putExtra("open_editor", true)
                 launchIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-                val pi = PendingIntent.getActivity(
+                val pi = android.app.PendingIntent.getActivity(
                     context, widgetId, launchIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                    android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
                 )
                 views.setOnClickPendingIntent(R.id.widget_day, pi)
                 views.setOnClickPendingIntent(R.id.widget_date, pi)
@@ -116,10 +128,10 @@ class DateTimeWidgetProvider : AppWidgetProvider() {
             }
         }
 
-        /** Read ClockConfig from FlutterSharedPreferences.xml */
+        /** Read ClockConfig from status_bar_config SharedPreferences */
         private fun readConfig(context: Context): ClockData {
             return try {
-                val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                val prefs = context.getSharedPreferences(CONFIG_PREFS, Context.MODE_PRIVATE)
                 val json = prefs.getString(CONFIG_KEY, null)
                 if (json != null) parseClockData(json) else ClockData()
             } catch (_: Exception) {
@@ -127,10 +139,6 @@ class DateTimeWidgetProvider : AppWidgetProvider() {
             }
         }
 
-        /**
-         * Minimal JSON parser for ClockConfig — avoids pulling in a JSON library
-         * since the structure is small and predictable.
-         */
         private fun parseClockData(json: String): ClockData {
             fun extract(key: String): String? {
                 val pattern = "\"$key\"\\s*:\\s*\"([^\"]*?)\""
@@ -183,20 +191,27 @@ class DateTimeWidgetProvider : AppWidgetProvider() {
                 SimpleDateFormat("HH:mm", Locale.getDefault()).format(date)
             }
 
+            // #7: Locale-aware day names using SimpleDateFormat
+            val dayOfWeek = cal.get(Calendar.DAY_OF_WEEK)
+            val dayIdx = dayOfWeek - Calendar.MONDAY
+            val dayIdxSafe = if (dayIdx < 0) 6 else dayIdx
+
             val dayNames = arrayOf("Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday")
             val dayShort = arrayOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
-            val dayOfWeek = cal.get(Calendar.DAY_OF_WEEK) - 2 // 0=Monday
-            val dayIdx = if (dayOfWeek < 0) 6 else dayOfWeek
 
             val day = if (config.showDay) {
-                if (config.format.contains("EEE")) dayShort[dayIdx].uppercase(Locale.getDefault())
-                else dayNames[dayIdx]
+                if (config.format.contains("EEE")) dayShort[dayIdxSafe].uppercase(Locale.getDefault())
+                else {
+                    // Use locale-aware display name
+                    val localeDay = cal.getDisplayName(Calendar.DAY_OF_WEEK, Calendar.LONG, Locale.getDefault())
+                    localeDay ?: dayNames[dayIdxSafe]
+                }
             } else ""
 
             val dateFormat = config.format
-                .replace(Regex("E+"), "") // remove day-of-week tokens
-                .replace(Regex("^\\s*,\\s*"), "") // remove leading comma
-                .replace(Regex("\\s*,\\s*$"), "") // remove trailing comma
+                .replace(Regex("E+"), "")
+                .replace(Regex("^\\s*,\\s*"), "")
+                .replace(Regex("\\s*,\\s*$"), "")
                 .trim()
 
             val dateStr = if (config.showDate && dateFormat.isNotEmpty()) {
@@ -221,33 +236,14 @@ class DateTimeWidgetProvider : AppWidgetProvider() {
         for (id in appWidgetIds) {
             renderWidget(context, appWidgetManager, id)
         }
-        scheduleNextAlarm(context)
-    }
-
-    override fun onReceive(context: Context, intent: Intent) {
-        super.onReceive(context, intent)
-        if (intent.action == ACTION_TICK) {
-            updateAllWidgets(context)
-            scheduleNextAlarm(context)
-        }
     }
 
     override fun onEnabled(context: Context) {
         super.onEnabled(context)
-        scheduleNextAlarm(context)
     }
 
     override fun onDisabled(context: Context) {
         super.onDisabled(context)
-        val am = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val intent = Intent(context, DateTimeWidgetProvider::class.java).apply {
-            action = ACTION_TICK
-        }
-        val pi = PendingIntent.getBroadcast(
-            context, 0, intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-        am.cancel(pi)
     }
 
     // ── Data classes ────────────────────────────────────────

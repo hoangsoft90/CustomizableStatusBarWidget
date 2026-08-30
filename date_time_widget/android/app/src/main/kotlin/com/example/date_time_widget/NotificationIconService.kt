@@ -13,8 +13,7 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.os.Build
-import android.os.Handler
-import android.os.Looper
+import android.util.Log
 import androidx.core.app.NotificationCompat
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -26,17 +25,14 @@ import java.util.Locale
  * day number (e.g. "30") as a small monochrome icon and the full
  * day / date / time in the expanded notification body.
  *
- * Design notes (plan1_final.md §1 "Giới hạn của notification icon"):
- *  - The small status-bar icon is monochrome, ~24dp.  We generate a
- *    bitmap with the day number text rendered on it.  This works on
- *    most OEMs but may be cropped on some (Samsung tends to clip).
- *  - The full text ("Sunday, 30 August 2026  ·  08:35") is in the
- *    notification content — always visible when the shade is pulled.
+ * Config is read from "status_bar_config" SharedPreferences — written
+ * by Flutter via MethodChannel JSON (see widget_bridge.dart).
  *
  * Usage:
  *   NotificationIconService.start(context)
  *   NotificationIconService.stop(context)
  *   NotificationIconService.isEnabled(context)
+ *   NotificationIconService.saveConfig(context, json)
  */
 object NotificationIconService {
 
@@ -45,38 +41,22 @@ object NotificationIconService {
     private const val NOTIFICATION_ID = 7777
     private const val PREFS_NAME = "FlutterSharedPreferences"
     private const val ENABLED_KEY = "flutter.notification_enabled"
-    private const val UPDATE_INTERVAL_MS = 60_000L // 1 minute
+    private const val TAG = "NotifIconService"
 
-    private val handler = Handler(Looper.getMainLooper())
-    private var appContext: Context? = null
-    private val updateRunnable = object : Runnable {
-        override fun run() {
-            appContext?.let { ctx ->
-                if (isEnabled(ctx)) {
-                    val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-                    nm.notify(NOTIFICATION_ID, buildNotification(ctx))
-                }
-            }
-            handler.postDelayed(this, UPDATE_INTERVAL_MS)
-        }
-    }
+    // Config stored in our own SharedPreferences
+    private const val CONFIG_PREFS = "status_bar_config"
+    private const val CONFIG_KEY = "clock_config"
 
     // ── Public API ──────────────────────────────────────────
 
     fun start(context: Context) {
-        appContext = context.applicationContext
         createChannel(context)
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         nm.notify(NOTIFICATION_ID, buildNotification(context))
         saveEnabled(context, true)
-        // Start periodic auto-update
-        handler.removeCallbacks(updateRunnable)
-        handler.postDelayed(updateRunnable, UPDATE_INTERVAL_MS)
     }
 
     fun stop(context: Context) {
-        handler.removeCallbacks(updateRunnable)
-        appContext = null
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         nm.cancel(NOTIFICATION_ID)
         saveEnabled(context, false)
@@ -89,6 +69,13 @@ object NotificationIconService {
         nm.notify(NOTIFICATION_ID, buildNotification(context))
     }
 
+    /** Called by MainActivity when Flutter sends config JSON via MethodChannel. */
+    fun saveConfig(context: Context, json: String) {
+        context.getSharedPreferences(CONFIG_PREFS, Context.MODE_PRIVATE)
+            .edit().putString(CONFIG_KEY, json).apply()
+        update(context)
+    }
+
     fun isEnabled(context: Context): Boolean {
         return getPrefs(context).getBoolean(ENABLED_KEY, false)
     }
@@ -96,31 +83,36 @@ object NotificationIconService {
     // ── Notification builder ────────────────────────────────
 
     private fun buildNotification(context: Context): Notification {
+        val config = readConfig(context)
         val cal = Calendar.getInstance()
         val now = cal.time
 
         val dayOfMonth = cal.get(Calendar.DAY_OF_MONTH)
         val dayNumber = dayOfMonth.toString()
 
-        // Full text for expanded view
-        val dayNames = arrayOf(
-            "Monday", "Tuesday", "Wednesday", "Thursday",
-            "Friday", "Saturday", "Sunday"
-        )
-        val monthNames = arrayOf(
-            "January", "February", "March", "April", "May", "June",
-            "July", "August", "September", "October", "November", "December"
-        )
-        val dayOfWeek = cal.get(Calendar.DAY_OF_WEEK)
-        val dayName = dayNames[dayOfWeek - Calendar.MONDAY]
-        val monthName = monthNames[cal.get(Calendar.MONTH)]
-        val year = cal.get(Calendar.YEAR)
+        // #7: Locale-aware day/month names using SimpleDateFormat
+        val fullDatePattern = "EEEE, d MMMM yyyy"
+        val fullDate = try {
+            SimpleDateFormat(fullDatePattern, Locale.getDefault()).format(now)
+        } catch (_: Exception) {
+            // Fallback: manual build with locale display names
+            val dayName = cal.getDisplayName(Calendar.DAY_OF_WEEK, Calendar.LONG, Locale.getDefault()) ?: ""
+            val monthName = cal.getDisplayName(Calendar.MONTH, Calendar.LONG, Locale.getDefault()) ?: ""
+            "$dayName, $dayOfMonth $monthName ${cal.get(Calendar.YEAR)}"
+        }
 
-        val fullDate = "$dayName, $dayOfMonth $monthName $year"
-        val time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(now)
+        // #2: Use config.timeFormat + showSeconds
+        val timePattern = if (config.showSeconds) {
+            config.timeFormat.replace("mm", "mm:ss")
+        } else {
+            config.timeFormat
+        }
+        val time = try {
+            SimpleDateFormat(timePattern, Locale.getDefault()).format(now)
+        } catch (_: Exception) {
+            SimpleDateFormat("HH:mm", Locale.getDefault()).format(now)
+        }
 
-        // Read config for custom color
-        val config = readConfig(context)
         val iconColor = parseColor(config.color)
 
         // Small icon: bitmap with day number
@@ -137,7 +129,7 @@ object NotificationIconService {
 
         return NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(iconCompat)
-            .setLargeIcon(createDayBitmap(dayNumber)) // same for large icon
+            .setLargeIcon(createDayBitmap(dayNumber))
             .setContentTitle(fullDate)
             .setContentText(time)
             .setStyle(
@@ -146,7 +138,7 @@ object NotificationIconService {
                     .setBigContentTitle("Date & Time Widget")
             )
             .setContentIntent(contentIntent)
-            .setOngoing(true) // persistent, can't swipe away
+            .setOngoing(true)
             .setShowWhen(false)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setCategory(NotificationCompat.CATEGORY_STATUS)
@@ -189,7 +181,7 @@ object NotificationIconService {
             val channel = NotificationChannel(
                 CHANNEL_ID,
                 CHANNEL_NAME,
-                NotificationManager.IMPORTANCE_LOW, // no sound, no badge
+                NotificationManager.IMPORTANCE_LOW,
             ).apply {
                 description = "Persistent date & time icon in status bar"
                 setShowBadge(false)
@@ -201,28 +193,41 @@ object NotificationIconService {
         }
     }
 
-    // ── Config reader (same as DateTimeWidgetProvider) ──────
+    // ── Config reader (#3: reads from status_bar_config) ────
 
+    /** Convenience: read from our own SharedPreferences. */
     private fun readConfig(context: Context): ClockData {
         return try {
-            val prefs = getPrefs(context)
-            val json = prefs.getString("flutter.clock_config", null)
+            val json = context.getSharedPreferences(CONFIG_PREFS, Context.MODE_PRIVATE)
+                .getString(CONFIG_KEY, null)
             if (json != null) parseClockData(json) else ClockData()
         } catch (_: Exception) {
             ClockData()
         }
     }
 
+    // #2: Full ClockData parse — matches DateTimeWidgetProvider.parseClockData()
     private fun parseClockData(json: String): ClockData {
         fun extract(key: String): String? {
             val pattern = "\"$key\"\\s*:\\s*\"([^\"]*?)\""
-            Regex(pattern).find(json)?.let { return it.groupValues[1] }
+            val boolPattern = "\"$key\"\\s*:\\s*(true|false)"
             val numPattern = "\"$key\"\\s*:\\s*([\\d.]+)"
+
+            Regex(pattern).find(json)?.let { return it.groupValues[1] }
+            Regex(boolPattern).find(json)?.let { return it.groupValues[1] }
             Regex(numPattern).find(json)?.let { return it.groupValues[1] }
             return null
         }
+
         return ClockData(
+            format = extract("format") ?: "EEE dd MMM",
+            timeFormat = extract("timeFormat") ?: "HH:mm",
+            showSeconds = extract("showSeconds") == "true",
+            showDate = extract("showDate") != "false",
+            showDay = extract("showDay") != "false",
+            fontSize = (extract("fontSize")?.toDoubleOrNull() ?: 32.0),
             color = extract("color") ?: "#FFFFFF",
+            alignment = extract("alignment") ?: "center",
         )
     }
 
@@ -248,5 +253,15 @@ object NotificationIconService {
         getPrefs(context).edit().putBoolean(ENABLED_KEY, value).apply()
     }
 
-    data class ClockData(val color: String = "#FFFFFF")
+    // #2: Full ClockData with all fields
+    data class ClockData(
+        val format: String = "EEE dd MMM",
+        val timeFormat: String = "HH:mm",
+        val showSeconds: Boolean = false,
+        val showDate: Boolean = true,
+        val showDay: Boolean = true,
+        val fontSize: Double = 32.0,
+        val color: String = "#FFFFFF",
+        val alignment: String = "center",
+    )
 }

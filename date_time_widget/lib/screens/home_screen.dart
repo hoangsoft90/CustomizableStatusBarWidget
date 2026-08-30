@@ -15,8 +15,10 @@ import 'settings_screen.dart';
 
 /// Home screen — entry point after onboarding.
 ///
-/// Displays a live [ClockPreview] and buttons to Customise, Add Widget,
-/// Enable Notification, and Enable Floating Bar.
+/// Displays a live [ClockPreview] and buttons grouped by priority:
+///   1. STATUS BAR (Notification) — P0 USP
+///   2. HOME SCREEN (Widget) — P0
+///   3. FLOATING BAR — P1 optional
 class HomeScreen extends StatefulWidget {
   final StorageService storage;
   final AdsService adsService;
@@ -45,7 +47,6 @@ class HomeScreenState extends State<HomeScreen> {
     super.initState();
     _config = widget.storage.loadConfig();
     _notifService = NotificationService(widget.storage);
-    // Pre-load rewarded ad for faster unlock flow
     widget.adsService.preloadRewarded();
   }
 
@@ -60,9 +61,10 @@ class HomeScreenState extends State<HomeScreen> {
     );
     if (updated != null && mounted) {
       setState(() => _config = updated);
-      WidgetBridge.updateWidgets();
+      final configJson = updated.toJsonString();
+      WidgetBridge.updateWidgets(configJson: configJson);
       _notifService.update();
-      FloatingBarBridge.update();
+      FloatingBarBridge.update(configJson: configJson);
     }
   }
 
@@ -78,13 +80,12 @@ class HomeScreenState extends State<HomeScreen> {
     );
     if (updated != null && mounted) {
       setState(() => _config = updated);
-      WidgetBridge.updateWidgets();
+      final configJson = updated.toJsonString();
+      WidgetBridge.updateWidgets(configJson: configJson);
       _notifService.update();
-      FloatingBarBridge.update();
+      FloatingBarBridge.update(configJson: configJson);
     }
   }
-
-  // ── Placeholder actions (logic added in prompts 5, 7) ──
 
   void _onAddWidget() {
     showDialog(
@@ -137,7 +138,6 @@ class HomeScreenState extends State<HomeScreen> {
       return;
     }
 
-    // 1. Explanation dialog — make it clear this is NOT modifying system status bar
     if (!mounted) return;
     final proceed = await showDialog<bool>(
       context: context,
@@ -166,11 +166,9 @@ class HomeScreenState extends State<HomeScreen> {
 
     if (proceed != true) return;
 
-    // 2. Check overlay permission
     final hasPermission = await FloatingBarBridge.hasOverlayPermission();
     if (!hasPermission) {
       await FloatingBarBridge.requestOverlayPermission();
-      // User is taken to system settings — they'll come back
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -183,7 +181,6 @@ class HomeScreenState extends State<HomeScreen> {
       return;
     }
 
-    // 3. Start service
     await FloatingBarBridge.start();
     setState(() => _config = _config.copyWith(floatingBarEnabled: true));
     if (mounted) {
@@ -203,7 +200,6 @@ class HomeScreenState extends State<HomeScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // ── Scrollable content ──
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.all(16),
@@ -224,7 +220,33 @@ class HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // ── Action buttons ──
+                  // ── Section: STATUS BAR (P0 — USP) ──
+                  _SectionHeader('STATUS BAR'),
+                  const SizedBox(height: 8),
+                  _ActionButton(
+                    icon: _notifService.isEnabled
+                        ? Icons.notifications_active
+                        : Icons.notifications_outlined,
+                    label: _notifService.isEnabled
+                        ? 'Disable Notification'
+                        : 'Enable Notification',
+                    onTap: _onEnableNotification,
+                  ),
+                  const SizedBox(height: 12),
+
+                  // ── Section: HOME SCREEN (P0) ──
+                  _SectionHeader('HOME SCREEN'),
+                  const SizedBox(height: 8),
+                  _ActionButton(
+                    icon: Icons.widgets_outlined,
+                    label: 'Add Widget',
+                    onTap: _onAddWidget,
+                  ),
+                  const SizedBox(height: 12),
+
+                  // ── Section: CUSTOMIZE ──
+                  _SectionHeader('CUSTOMIZE'),
+                  const SizedBox(height: 8),
                   _ActionButton(
                     icon: Icons.palette_outlined,
                     label: 'Customize',
@@ -237,22 +259,10 @@ class HomeScreenState extends State<HomeScreen> {
                     onTap: _openPresets,
                   ),
                   const SizedBox(height: 12),
-                  _ActionButton(
-                    icon: Icons.widgets_outlined,
-                    label: 'Add Widget',
-                    onTap: _onAddWidget,
-                  ),
-                  const SizedBox(height: 12),
-                  _ActionButton(
-                    icon: _notifService.isEnabled
-                        ? Icons.notifications_active
-                        : Icons.notifications_outlined,
-                    label: _notifService.isEnabled
-                        ? 'Disable Notification'
-                        : 'Enable Notification',
-                    onTap: _onEnableNotification,
-                  ),
-                  const SizedBox(height: 12),
+
+                  // ── Section: FLOATING BAR (P1 — optional) ──
+                  _SectionHeader('FLOATING BAR'),
+                  const SizedBox(height: 8),
                   _ActionButton(
                     icon: _config.floatingBarEnabled
                         ? Icons.open_in_browser
@@ -264,6 +274,8 @@ class HomeScreenState extends State<HomeScreen> {
                     subtitle: 'Optional — sits below status bar',
                   ),
                   const SizedBox(height: 12),
+
+                  // ── Settings ──
                   _ActionButton(
                     icon: Icons.settings_outlined,
                     label: 'Settings',
@@ -282,11 +294,29 @@ class HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
-            // ── AdMob banner ──
+            // AdMob banner
             AdBanner(show: widget.adsService.showBanners),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Section header for grouping action buttons.
+class _SectionHeader extends StatelessWidget {
+  final String label;
+  const _SectionHeader(this.label);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label,
+      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: Colors.grey[500],
+            letterSpacing: 1.2,
+            fontWeight: FontWeight.w600,
+          ),
     );
   }
 }

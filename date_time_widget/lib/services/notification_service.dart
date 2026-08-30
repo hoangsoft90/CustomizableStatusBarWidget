@@ -11,8 +11,7 @@ import 'storage_service.dart';
 /// 3. Request POST_NOTIFICATIONS permission.
 /// 4. Start / stop the native [NotificationIconService] via MethodChannel.
 ///
-/// On pre-Android-13 devices the permission is granted at install time,
-/// so we skip straight to starting the service.
+/// #3: update() now passes configJson to native via MethodChannel.
 class NotificationService {
   static const _channel =
       MethodChannel('com.example.date_time_widget/notification');
@@ -28,14 +27,10 @@ class NotificationService {
 
   /// Full flow: show explanation → request permission → start service.
   /// Returns `true` if the service was started.
-  ///
-  /// [context] is needed to show the explanation dialog.
   Future<bool> enable(BuildContext context) async {
-    // 1. Show explanation
     final proceed = await _showExplanation(context);
     if (!proceed) return false;
 
-    // 2. Request permission (Android 13+)
     final granted = await _requestPermission();
     if (!granted) {
       if (context.mounted) {
@@ -50,7 +45,6 @@ class NotificationService {
       return false;
     }
 
-    // 3. Start native service
     final started = await _startNative();
     if (started) {
       _saveEnabled(true);
@@ -65,15 +59,16 @@ class NotificationService {
   }
 
   /// Refresh the notification content (e.g. after config change).
+  ///
+  /// #3: Now passes the current config JSON to native.
   Future<void> update() async {
     if (!_loadEnabled()) return;
-    await _updateNative();
+    final configJson = _storage.loadConfig().toJsonString();
+    await _updateNative(configJson: configJson);
   }
 
   // ── Internal ──────────────────────────────────────────────
 
-  /// Show a clear explanation of what the notification does.
-  /// Returns `true` if user taps "Enable", `false` otherwise.
   Future<bool> _showExplanation(BuildContext context) async {
     final result = await showDialog<bool>(
       context: context,
@@ -102,7 +97,6 @@ class NotificationService {
     return result == true;
   }
 
-  /// Request POST_NOTIFICATIONS permission (Android 13+).
   Future<bool> _requestPermission() async {
     final status = await Permission.notification.status;
     if (status.isGranted) return true;
@@ -129,9 +123,12 @@ class NotificationService {
     }
   }
 
-  Future<bool> _updateNative() async {
+  /// #3: Pass configJson to native notification service.
+  Future<bool> _updateNative({String? configJson}) async {
     try {
-      final result = await _channel.invokeMethod<bool>('updateNotification');
+      final result = await _channel.invokeMethod<bool>('updateNotification', {
+        'configJson': configJson,
+      });
       return result ?? false;
     } on PlatformException {
       return false;
@@ -143,13 +140,11 @@ class NotificationService {
   static const _enabledKey = 'notificationEnabled';
 
   bool _loadEnabled() {
-    // Try SharedPreferences first (Flutter side)
     return _storage.prefs.getBool(_enabledKey) ?? false;
   }
 
   void _saveEnabled(bool value) {
     _storage.prefs.setBool(_enabledKey, value);
-    // Also update ClockConfig
     final config = _storage.loadConfig();
     _storage.saveConfig(config.copyWith(notificationEnabled: value));
   }

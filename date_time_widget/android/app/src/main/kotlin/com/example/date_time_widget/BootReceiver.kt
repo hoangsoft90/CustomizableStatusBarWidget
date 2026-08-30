@@ -10,10 +10,8 @@ import android.util.Log
  * Listens for [android.intent.action.BOOT_COMPLETED] and re-enables
  * services the user had active before reboot.
  *
- * Services restarted:
- *  1. NotificationIconService (if user had it enabled)
- *  2. FloatingBarService (if user had it enabled) — wrapped in try-catch
- *  3. DateTimeWidgetProvider (always — widget needs fresh time)
+ * #5: Starts TimeTickService (ACTION_TIME_TICK) instead of AlarmManager.
+ * All services now read config from "status_bar_config" SharedPreferences.
  */
 class BootReceiver : BroadcastReceiver() {
 
@@ -24,7 +22,14 @@ class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != Intent.ACTION_BOOT_COMPLETED) return
 
-        // 1. Restart notification icon if user had it enabled
+        // 1. Start TimeTickService — handles all tick updates
+        try {
+            TimeTickService.start(context)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to start TimeTickService", e)
+        }
+
+        // 2. Restart notification icon if user had it enabled
         try {
             if (NotificationIconService.isEnabled(context)) {
                 NotificationIconService.start(context)
@@ -33,9 +38,7 @@ class BootReceiver : BroadcastReceiver() {
             Log.e(TAG, "Failed to restart NotificationIconService", e)
         }
 
-        // 2. Restart floating bar if user had it enabled
-        // Wrapped in try-catch because foreground services from
-        // BOOT_COMPLETED may be restricted on Android 15+ or OEM skins
+        // 3. Restart floating bar if user had it enabled
         try {
             if (FloatingBarService.isEnabled(context)) {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -52,10 +55,9 @@ class BootReceiver : BroadcastReceiver() {
             Log.e(TAG, "Failed to restart FloatingBarService", e)
         }
 
-        // 3. Force-update every widget instance
+        // 4. Force-update every widget instance
         try {
             DateTimeWidgetProvider.updateAllWidgets(context)
-            DateTimeWidgetProvider.scheduleNextAlarm(context)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to update widgets", e)
         }

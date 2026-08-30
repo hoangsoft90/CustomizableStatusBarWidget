@@ -23,17 +23,21 @@ class MainActivity : FlutterActivity() {
             flutterEngine.dartExecutor.binaryMessenger,
             "com.example.date_time_widget/deep_link",
         )
-        // Check if launched from widget tap
         handleDeepLink(intent)
 
-        // ── Widget channel ──────────────────────────────────
+        // ── Widget channel (#3: receives configJson) ─────────
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             WIDGET_CHANNEL,
         ).setMethodCallHandler { call, result ->
             when (call.method) {
                 "updateWidgets" -> {
-                    DateTimeWidgetProvider.updateAllWidgets(this)
+                    val configJson = call.argument<String>("configJson")
+                    if (configJson != null) {
+                        DateTimeWidgetProvider.saveConfig(this, configJson)
+                    } else {
+                        DateTimeWidgetProvider.updateAllWidgets(this)
+                    }
                     result.success(true)
                 }
                 "requestWidgetPick" -> {
@@ -43,7 +47,7 @@ class MainActivity : FlutterActivity() {
             }
         }
 
-        // ── Notification channel ────────────────────────────
+        // ── Notification channel (#3: receives configJson) ───
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             NOTIF_CHANNEL,
@@ -58,7 +62,12 @@ class MainActivity : FlutterActivity() {
                     result.success(true)
                 }
                 "updateNotification" -> {
-                    NotificationIconService.update(this)
+                    val configJson = call.argument<String>("configJson")
+                    if (configJson != null) {
+                        NotificationIconService.saveConfig(this, configJson)
+                    } else {
+                        NotificationIconService.update(this)
+                    }
                     result.success(true)
                 }
                 "isNotificationEnabled" -> {
@@ -68,7 +77,7 @@ class MainActivity : FlutterActivity() {
             }
         }
 
-        // ── Floating bar channel ────────────────────────────
+        // ── Floating bar channel (#3: receives configJson) ───
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             FLOATING_CHANNEL,
@@ -83,7 +92,12 @@ class MainActivity : FlutterActivity() {
                     result.success(true)
                 }
                 "updateFloatingBar" -> {
-                    FloatingBarService.update(this)
+                    val configJson = call.argument<String>("configJson")
+                    if (configJson != null) {
+                        FloatingBarService.saveConfig(this, configJson)
+                    } else {
+                        FloatingBarService.update(this)
+                    }
                     result.success(true)
                 }
                 "isFloatingBarEnabled" -> {
@@ -99,13 +113,16 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+
+        // ── Start TimeTickService on app launch (#5) ────────
+        TimeTickService.start(this)
     }
 
     private fun hasOverlayPermission(): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             Settings.canDrawOverlays(this)
         } else {
-            true // pre-M, permission granted at install
+            true
         }
     }
 

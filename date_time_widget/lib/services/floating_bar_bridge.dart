@@ -2,9 +2,8 @@ import 'package:flutter/services.dart';
 
 /// Bridges Flutter ↔ Native Android floating bar service.
 ///
-/// The floating bar uses `TYPE_APPLICATION_OVERLAY` and sits
-/// RIGHT BELOW the real status bar — it does NOT draw on top
-/// of System UI (plan1_final.md §0, §5).
+/// #3: Now passes the config JSON to native via MethodChannel.
+/// Native saves it to "status_bar_config" SharedPreferences.
 class FloatingBarBridge {
   static const _channel =
       MethodChannel('com.example.date_time_widget/floating_bar');
@@ -41,9 +40,14 @@ class FloatingBarBridge {
   }
 
   /// Restart the service to pick up config changes.
-  static Future<void> update() async {
+  ///
+  /// [configJson] — the ClockConfig serialized as JSON string.
+  /// If null, native reads from its own SharedPreferences.
+  static Future<void> update({String? configJson}) async {
     try {
-      await _channel.invokeMethod<void>('updateFloatingBar');
+      await _channel.invokeMethod<void>('updateFloatingBar', {
+        'configJson': configJson,
+      });
     } on PlatformException catch (_) {}
   }
 
