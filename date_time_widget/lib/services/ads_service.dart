@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import '../models/clock_config.dart';
+import '../utils/constants.dart';
 import 'storage_service.dart';
 
 /// Manages AdMob ads: Adaptive Banner + Rewarded Video.
@@ -19,10 +20,8 @@ class AdsService {
 
   AdsService(this._storage);
 
-  // ── Test Ad Unit IDs (dev only) ──────────────────────────
-  // https://developers.google.com/admob/android/test-ads
-  static const _bannerAdUnitId = 'ca-app-pub-3940256099942544/6300978111';
-  static const _rewardedAdUnitId = 'ca-app-pub-3940256099942544/5224354917';
+  // Ad unit IDs are managed in AppConstants (constants.dart)
+  // Set AppConstants.testAds = false and replace prod IDs before release
 
   bool get _isPremium => _storage.loadConfig().isPremium;
 
@@ -39,7 +38,7 @@ class AdsService {
   /// placing it in the widget tree and calling `dispose()` when done.
   BannerAd createBanner() {
     return BannerAd(
-      adUnitId: _bannerAdUnitId,
+      adUnitId: AppConstants.bannerAdUnitId,
       size: AdSize.banner,
       request: const AdRequest(),
       listener: BannerAdListener(
@@ -62,7 +61,7 @@ class AdsService {
   Future<void> preloadRewarded() async {
     if (_isPremium) return;
     await RewardedAd.load(
-      adUnitId: _rewardedAdUnitId,
+      adUnitId: AppConstants.rewardedAdUnitId,
       request: const AdRequest(),
       rewardedAdLoadCallback: RewardedAdLoadCallback(
         onAdLoaded: (ad) {

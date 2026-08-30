@@ -239,13 +239,14 @@ class FloatingBarService : Service() {
 
         layout.addView(dayText)
         layout.addView(dateText)
-        layout.addView(timeText)
 
-        // Fill remaining space before time
+        // Spacer fills remaining horizontal space, pushing timeText to the right
         val spacer = View(this).apply {
             layoutParams = LinearLayout.LayoutParams(0, 1, 1f)
         }
-        layout.addView(spacer, layout.indexOfChild(timeText))
+        layout.addView(spacer)
+
+        layout.addView(timeText)
 
         // Tag the views for update
         layout.tag = Triple(dayText, dateText, timeText)

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Network security configuration for Date & Time Widget.
+  Allows HTTP cleartext traffic for AdMob test ads and IAP sandbox.
+  Production builds should use HTTPS only.
+-->
+<network-security-config>
+    <!-- Allow cleartext (HTTP) traffic for testing and ad loading -->
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

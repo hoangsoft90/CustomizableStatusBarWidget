@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
+import '../utils/constants.dart';
+
 /// Displays an AdMob adaptive banner.
 ///
 /// Returns `SizedBox.shrink()` when [show] is `false` (premium users).
@@ -39,7 +41,7 @@ class _AdBannerState extends State<AdBanner> {
 
   void _loadAd() {
     final ad = BannerAd(
-      adUnitId: 'ca-app-pub-3940256099942544/6300978111', // test ID
+      adUnitId: AppConstants.bannerAdUnitId,
       size: AdSize.banner,
       request: const AdRequest(),
       listener: BannerAdListener(
