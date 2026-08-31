@@ -182,12 +182,21 @@ class _EditorScreenState extends State<EditorScreen> {
 
   /// Bake the background to a bitmap and push it to the native widget.
   Future<void> _bakeAndSetWidgetBackground() async {
-    if (_background.type == BackgroundType.none) return;
-
     try {
       // Get all active widget IDs
       final widgetIds = await WidgetBridge.getActiveWidgetIds();
       if (widgetIds.isEmpty) return;
+
+      if (_background.type == BackgroundType.none) {
+        // Clear background on all widgets
+        for (final widgetId in widgetIds) {
+          await WidgetBridge.setWidgetBackground(
+            widgetId: widgetId,
+            bitmapPath: null,
+          );
+        }
+        return;
+      }
 
       // Bake background at max widget size (480×480)
       final bitmapBytes = await ImageUtils.bakeBackgroundBitmap(
@@ -195,7 +204,16 @@ class _EditorScreenState extends State<EditorScreen> {
         width: 480,
         height: 480,
       );
-      if (bitmapBytes == null) return;
+      if (bitmapBytes == null) {
+        // Bake returned null (e.g. missing image) — clear bitmap
+        for (final widgetId in widgetIds) {
+          await WidgetBridge.setWidgetBackground(
+            widgetId: widgetId,
+            bitmapPath: null,
+          );
+        }
+        return;
+      }
 
       // Save bitmap to disk
       final appDir = await getApplicationDocumentsDirectory();

@@ -147,6 +147,19 @@ class ImageUtils {
     return destinationPath;
   }
 
+  /// Parse a hex color string like "#FF0000" or "FF0000".
+  /// Returns [fallback] if parsing fails.
+  static Color _parseHexColor(String? hex, Color fallback) {
+    if (hex == null) return fallback;
+    try {
+      final clean = hex.replaceFirst('#', '');
+      if (clean.length != 6 && clean.length != 8) return fallback;
+      return Color(int.parse('FF$clean', radix: 16));
+    } catch (_) {
+      return fallback;
+    }
+  }
+
   /// Bake a [BackgroundConfig] into a PNG bitmap at widget size.
   ///
   /// For [BackgroundType.none], returns `null` (no bitmap needed).
@@ -165,113 +178,116 @@ class ImageUtils {
     final recorder = ui.PictureRecorder();
     final canvas = Canvas(recorder);
     final size = Size(cappedW.toDouble(), cappedH.toDouble());
-    // ignore: unnecessary_import
-    // Canvas, Paint, Rect, Size, FilterQuality are re-exported
-    // from package:flutter/painting.dart via dart:ui
 
-    switch (background.type) {
-      case BackgroundType.solid:
-        final hex = (background.solidColor ?? '#1A1A2E')
-            .replaceFirst('#', '');
-        final color =
-            Color(int.parse('FF$hex', radix: 16));
-        canvas.drawRect(
-          Rect.fromLTWH(0, 0, size.width, size.height),
-          Paint()..color = color,
-        );
-
-      case BackgroundType.gradient:
-        final colors = background.gradientColors
-                ?.map((h) {
-                  final hex = h.replaceFirst('#', '');
-                  return Color(int.parse('FF$hex', radix: 16));
-                })
-                .toList() ??
-            [const Color(0xFF1A1A2E), const Color(0xFF16213E)];
-        final rect =
-            Rect.fromLTWH(0, 0, size.width, size.height);
-        final gradient = LinearGradient(
-          colors: colors,
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        );
-        canvas.drawRect(
-          rect,
-          Paint()..shader = gradient.createShader(rect),
-        );
-
-      case BackgroundType.image:
-        final path = background.imagePath;
-        if (path == null || !File(path).existsSync()) return null;
-
-        final bytes =
-            Uint8List.fromList(await File(path).readAsBytes());
-        final codec = await ui.instantiateImageCodec(bytes);
-        final frame = await codec.getNextFrame();
-        final src = frame.image;
-
-        // Crop region calculation
-        final srcW = src.width.toDouble();
-        final srcH = src.height.toDouble();
-        final scale = background.cropScale;
-        final cropW = srcW / scale;
-        final cropH = srcH / scale;
-        final cropX =
-            srcW * background.cropOffsetX - cropW / 2;
-        final cropY =
-            srcH * background.cropOffsetY - cropH / 2;
-
-        canvas.drawImageRect(
-          src,
-          Rect.fromLTWH(
-            cropX.clamp(0, srcW - cropW),
-            cropY.clamp(0, srcH - cropH),
-            cropW,
-            cropH,
-          ),
-          Rect.fromLTWH(
-            0,
-            0,
-            size.width,
-            size.height,
-          ),
-          Paint()
-            ..filterQuality = FilterQuality.high,
-        );
-
-        // Overlay
-        if (background.overlayMode != OverlayMode.none &&
-            background.overlayOpacity > 0) {
-          final overlayColor =
-              background.overlayMode == OverlayMode.dark
-                  ? const Color(0xFF000000)
-                  : const Color(0xFFFFFFFF);
-          canvas.drawRect(
-            Rect.fromLTWH(
-              0,
-              0,
-              size.width,
-              size.height,
-            ),
-            Paint()
-              ..color = overlayColor
-                  .withValues(alpha: background.overlayOpacity),
+    try {
+      switch (background.type) {
+        case BackgroundType.solid:
+          final color = _parseHexColor(
+            background.solidColor,
+            const Color(0xFF1A1A2E),
           );
-        }
+          canvas.drawRect(
+            Rect.fromLTWH(0, 0, size.width, size.height),
+            Paint()..color = color,
+          );
 
-        src.dispose();
+        case BackgroundType.gradient:
+          final rawColors = background.gradientColors
+                  ?.map((h) => _parseHexColor(h, const Color(0xFF1A1A2E)))
+                  .toList() ??
+              [];
+          // LinearGradient requires ≥ 2 colors
+          final colors = rawColors.length >= 2
+              ? rawColors
+              : [
+                  const Color(0xFF1A1A2E),
+                  const Color(0xFF16213E),
+                ];
+          final rect =
+              Rect.fromLTWH(0, 0, size.width, size.height);
+          final gradient = LinearGradient(
+            colors: colors,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          );
+          canvas.drawRect(
+            rect,
+            Paint()..shader = gradient.createShader(rect),
+          );
 
-      case BackgroundType.none:
+        case BackgroundType.image:
+          final path = background.imagePath;
+          if (path == null) return null;
+          final file = File(path);
+          if (!await file.exists()) return null;
+
+          ui.Image? src;
+          try {
+            final bytes = Uint8List.fromList(await file.readAsBytes());
+            final codec = await ui.instantiateImageCodec(bytes);
+            final frame = await codec.getNextFrame();
+            src = frame.image;
+
+            // Crop region calculation with safety clamps
+            final srcW = src.width.toDouble();
+            final srcH = src.height.toDouble();
+            final scale =
+                background.cropScale.clamp(0.01, 10.0); // prevent div-by-zero
+            var cropW = srcW / scale;
+            var cropH = srcH / scale;
+            cropW = cropW.clamp(1.0, srcW); // at least 1px, at most full
+            cropH = cropH.clamp(1.0, srcH);
+
+            final offsetX =
+                background.cropOffsetX.clamp(0.0, 1.0);
+            final offsetY =
+                background.cropOffsetY.clamp(0.0, 1.0);
+            var cropX = srcW * offsetX - cropW / 2;
+            var cropY = srcH * offsetY - cropH / 2;
+            cropX = cropX.clamp(0.0, max(0.0, srcW - cropW));
+            cropY = cropY.clamp(0.0, max(0.0, srcH - cropH));
+
+            canvas.drawImageRect(
+              src,
+              Rect.fromLTWH(cropX, cropY, cropW, cropH),
+              Rect.fromLTWH(0, 0, size.width, size.height),
+              Paint()..filterQuality = FilterQuality.high,
+            );
+
+            // Overlay
+            if (background.overlayMode != OverlayMode.none &&
+                background.overlayOpacity > 0) {
+              final overlayColor =
+                  background.overlayMode == OverlayMode.dark
+                      ? const Color(0xFF000000)
+                      : const Color(0xFFFFFFFF);
+              canvas.drawRect(
+                Rect.fromLTWH(0, 0, size.width, size.height),
+                Paint()
+                  ..color = overlayColor
+                      .withValues(alpha: background.overlayOpacity),
+              );
+            }
+          } finally {
+            src?.dispose(); // always release native image memory
+          }
+
+        case BackgroundType.none:
+        // Already handled above, but exhaustive switch needs it.
         return null;
+      }
+
+      final picture = recorder.endRecording();
+      final image = await picture.toImage(cappedW, cappedH);
+      final byteData =
+          await image.toByteData(format: ui.ImageByteFormat.png);
+      picture.dispose();
+      image.dispose();
+
+      return byteData?.buffer.asUint8List();
+    } catch (_) {
+      // Any render error → return null, caller falls back to no background
+      return null;
     }
-
-    final picture = recorder.endRecording();
-    final image =
-        await picture.toImage(cappedW, cappedH);
-    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-    picture.dispose();
-    image.dispose();
-
-    return byteData?.buffer.asUint8List();
   }
 }
