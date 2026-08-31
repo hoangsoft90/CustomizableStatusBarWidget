@@ -1,6 +1,6 @@
 # Working — Date & Time Widget
 
-> Cập nhật lần cuối: 2026-08-30
+> Cập nhật lần cuối: 2026-08-31
 
 ## Trạng Thái Hiện Tại
 
@@ -8,9 +8,17 @@
 **Build:** GitHub Actions ✅ passing
 **Tests:** 91/91 pass ✅
 **Package ID:** `com.example.date_time_widget` (tạm)
+**OpenSpec:** 35 specs
 
 ## Đã Hoàn Thành
 
+- [2026-08-31] **plan5_final.md** — Phase 1: Models (WidgetDesign, BackgroundConfig) + DesignStorageService + ImageUtils
+- [2026-08-31] **plan5_final.md** — Phase 2: Background UI in Editor (None/Solid/Gradient/Image) + CropScreen + ClockPreview background rendering
+- [2026-08-31] **plan5_final.md** — Phase 3: Home Widget native (ImageView in 4 XML layouts, applyWidgetBackground, onAppWidgetOptionsChanged)
+- [2026-08-31] **plan5_final.md** — Phase 4: My Designs screen (CRUD, quota 3, apply flow)
+- [2026-08-31] **plan5_final.md** — Phase 5: Share (render PNG 1080×540, system share sheet)
+- [2026-08-31] **plan5_final.md** — Phase 6: QA (static review, QA_PLAN5.md checklist)
+- [2026-08-31] **OpenSpec** — 6 specs updated + 6 specs created (plan5 coverage)
 - [2026-08-30] **plan3_final.md** — Task A: Remove showSeconds (fix bug 08:35:42:42)
 - [2026-08-30] **plan3_final.md** — Task B: Daily Reward Entitlement (RewardService, max 2/day)
 - [2026-08-30] **plan3_final.md** — Task C: Rewrite tests (69 → 91 tests)
@@ -45,9 +53,9 @@
 
 ## Todo — P1 Features
 
+- [x] ~~Share preset dưới dạng ảnh~~ (plan5 Phase 5)
 - [ ] Test Floating Bar trên Android 15+ thật
 - [ ] Thêm preset theo mùa/tuần
-- [ ] Share preset dưới dạng ảnh
 - [ ] Multiple widget instance
 
 ## Todo — Tech Debt
@@ -55,6 +63,9 @@
 - [ ] Extract ClockData to shared Kotlin util
 - [ ] Widget alignment support (layout XML variants)
 - [ ] TimeTickService auto-stop
+- [ ] Persist BackgroundConfig to SharedPreferences (currently lost on app restart)
+- [ ] Native blur support (currently Flutter preview only)
+- [ ] Auto text contrast computation (flag stored but not active)
 
 ## Known Issues
 
@@ -64,6 +75,10 @@
 | ClockData duplicated in 3 Kotlin files | Low | Known |
 | `parseClockData` uses regex | Low | Known |
 | `formatTime` replaces ALL `a` chars | Low | Known |
+| BackgroundConfig not persisted (lost on restart) | Medium | Known, plan5 |
+| Blur only in Flutter preview (not native widget) | Low | Known, plan5 |
+| Auto text contrast flag stored but not computed | Low | Known, plan5 |
+| onAppWidgetOptionsChanged needs app running to re-bake | Low | Known, plan5 |
 
 ## Build History
 
@@ -78,3 +93,4 @@
 | #7 | ❌ | XML parsing (unescaped &) |
 | #8 | ✅ | — |
 | #9+ | ✅ | All plan3 changes |
+| #10+ | ✅ | All plan5 changes (pending push) |

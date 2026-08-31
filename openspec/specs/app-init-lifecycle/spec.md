@@ -12,18 +12,19 @@
 1. `WidgetsFlutterBinding.ensureInitialized()`
 2. `StorageService.create()` — async, loads SharedPreferences
 3. `SharedPreferences.getInstance()` — for RewardService
-4. `RewardService(prefs)` — creates reward service instance
-5. `rewardService.resetIfNewDay()` — async, resets daily unlocks if new day
-6. `AdsService.init()` — async, initializes MobileAds
-7. `AdsService(storage, rewardService)` — creates service instance with reward dependency
-8. `IapService(storage)` — creates service instance
-9. `IapService.init()` — async, listens to purchase stream + queries products
-10. `runApp(DateWidgetApp(...))`
+4. `DesignStorageService.create()` — async, loads designs list from SharedPreferences
+5. `RewardService(prefs)` — creates reward service instance
+6. `rewardService.resetIfNewDay()` — async, resets daily unlocks if new day
+7. `AdsService.init()` — async, initializes MobileAds
+8. `AdsService(storage, rewardService)` — creates service instance with reward dependency
+9. `IapService(storage)` — creates service instance
+10. `IapService.init()` — async, listens to purchase stream + queries products
+11. `runApp(DateWidgetApp(...))`
 
 **Scenario: Init completes**
 - When `main()` runs
-- Then all 4 services (Storage, Reward, Ads, IAP) are initialized before `runApp`
-- Reference: `lib/main.dart:7-25`
+- Then all 5 services (Storage, DesignStorage, Reward, Ads, IAP) are initialized before `runApp`
+- Reference: `lib/main.dart:7-27`
 
 ### R2: WidgetsBindingObserver
 
@@ -54,6 +55,16 @@ App uses `ThemeData` with `ColorScheme.fromSeed(seedColor: Color(0xFF1A73E8))`, 
 - When the app renders
 - Then `darkTheme` is used with `brightness: Brightness.dark`
 - Reference: `lib/main.dart:62-74`
+
+### R6: DateWidgetApp accepts designStorage
+
+`DateWidgetApp` constructor now includes `designStorage` parameter, passed to `HomeScreen`.
+
+**Scenario: DesignStorageService passed to HomeScreen**
+- Given `DateWidgetApp(designStorage: designStorage, ...)` is created
+- When `HomeScreen` is constructed
+- Then `designStorage: widget.designStorage` is passed
+- Reference: `lib/main.dart:88-94`
 
 ### R5: dispose cleans up
 

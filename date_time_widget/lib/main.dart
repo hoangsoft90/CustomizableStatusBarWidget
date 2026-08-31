@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'screens/home_screen.dart';
 import 'services/ads_service.dart';
+import 'services/design_storage_service.dart';
 import 'services/iap_service.dart';
 import 'services/reward_service.dart';
 import 'services/storage_service.dart';
@@ -14,6 +15,9 @@ void main() async {
   // Core storage
   final storage = await StorageService.create();
   final prefs = await SharedPreferences.getInstance();
+
+  // Design storage (My Designs)
+  final designStorage = await DesignStorageService.create();
 
   // Reward service (daily unlock tracking)
   final rewardService = RewardService(prefs);
@@ -27,6 +31,7 @@ void main() async {
 
   runApp(DateWidgetApp(
     storage: storage,
+    designStorage: designStorage,
     adsService: adsService,
     iapService: iapService,
     rewardService: rewardService,
@@ -35,6 +40,7 @@ void main() async {
 
 class DateWidgetApp extends StatefulWidget {
   final StorageService storage;
+  final DesignStorageService designStorage;
   final AdsService adsService;
   final IapService iapService;
   final RewardService rewardService;
@@ -42,6 +48,7 @@ class DateWidgetApp extends StatefulWidget {
   const DateWidgetApp({
     super.key,
     required this.storage,
+    required this.designStorage,
     required this.adsService,
     required this.iapService,
     required this.rewardService,
@@ -114,6 +121,7 @@ class _DateWidgetAppState extends State<DateWidgetApp>
       home: HomeScreen(
         key: _homeKey,
         storage: widget.storage,
+        designStorage: widget.designStorage,
         adsService: widget.adsService,
         iapService: widget.iapService,
         rewardService: widget.rewardService,

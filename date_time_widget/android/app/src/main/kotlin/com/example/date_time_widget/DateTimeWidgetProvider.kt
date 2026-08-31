@@ -5,7 +5,9 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.widget.RemoteViews
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -49,6 +51,20 @@ class DateTimeWidgetProvider : AppWidgetProvider() {
             FloatingBarService.updateOverlay(context)
         }
 
+        /** Save the baked bitmap path for a specific widget instance. */
+        fun saveWidgetBackground(context: Context, widgetId: Int, bitmapPath: String?) {
+            val prefs = context.getSharedPreferences(CONFIG_PREFS, Context.MODE_PRIVATE)
+            val key = "widget_bg_$widgetId"
+            if (bitmapPath != null) {
+                prefs.edit().putString(key, bitmapPath).apply()
+            } else {
+                prefs.edit().remove(key).apply()
+            }
+            // Re-render this specific widget
+            val mgr = AppWidgetManager.getInstance(context)
+            renderWidget(context, mgr, widgetId)
+        }
+
         private fun renderWidget(
             context: Context,
             mgr: AppWidgetManager,
@@ -76,6 +92,9 @@ class DateTimeWidgetProvider : AppWidgetProvider() {
             views.setTextViewTextSize(R.id.widget_day, android.util.TypedValue.COMPLEX_UNIT_SP, baseSize * 0.45f)
             views.setTextViewTextSize(R.id.widget_date, android.util.TypedValue.COMPLEX_UNIT_SP, baseSize * 0.4f)
             views.setTextViewTextSize(R.id.widget_time, android.util.TypedValue.COMPLEX_UNIT_SP, baseSize)
+
+            // Apply background image if baked bitmap exists
+            applyWidgetBackground(context, views, widgetId)
 
             // #4: Alignment — RemoteViews does not support layout gravity.
             // Alignment is applied on the Floating Bar (native View) and
@@ -218,6 +237,50 @@ class DateTimeWidgetProvider : AppWidgetProvider() {
         for (id in appWidgetIds) {
             renderWidget(context, appWidgetManager, id)
         }
+    }
+
+    override fun onAppWidgetOptionsChanged(
+        context: Context,
+        appWidgetManager: AppWidgetManager,
+        widgetId: Int,
+        newOptions: android.os.Bundle,
+    ) {
+        // User resized widget — clear cached bitmap so Flutter can re-bake
+        // for the new size on next update
+        val prefs = context.getSharedPreferences(CONFIG_PREFS, Context.MODE_PRIVATE)
+        prefs.edit().remove("widget_bg_$widgetId").apply()
+
+        // Re-render with current config (no bitmap until Flutter re-bakes)
+        renderWidget(context, appWidgetManager, widgetId)
+    }
+
+    // ── Background rendering ──────────────────────────────
+
+    private fun applyWidgetBackground(
+        context: Context,
+        views: RemoteViews,
+        widgetId: Int,
+    ) {
+        val prefs = context.getSharedPreferences(CONFIG_PREFS, Context.MODE_PRIVATE)
+        val bitmapPath = prefs.getString("widget_bg_$widgetId", null)
+
+        if (bitmapPath != null && File(bitmapPath).exists()) {
+            try {
+                val bitmap = BitmapFactory.decodeFile(bitmapPath)
+                if (bitmap != null) {
+                    views.setImageViewBitmap(R.id.widget_background, bitmap)
+                    views.setViewVisibility(R.id.widget_background, android.view.View.VISIBLE)
+                    // Remove solid background when image is present
+                    // FrameLayout doesn't have android:background, so no need to clear
+                    return
+                }
+            } catch (_: Exception) {
+                // Fall through to default background
+            }
+        }
+
+        // No bitmap — hide ImageView, rely on default dark background
+        views.setViewVisibility(R.id.widget_background, android.view.View.GONE)
     }
 
     // ── Data classes ────────────────────────────────────────

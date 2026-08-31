@@ -1,6 +1,6 @@
 # Context — Date & Time Widget
 
-> Cập nhật lần cuối: 2026-08-30
+> Cập nhật lần cuối: 2026-08-31
 
 ## Mục đích
 
@@ -24,6 +24,11 @@ App Android giúp user thấy ngày, giờ trên 3 lớp:
 | Permissions | permission_handler |
 | Build | GitHub Actions (Flutter stable + Java 17) |
 | Target | Android API 36 |
+| Image picking | image_picker ^1.1.2 |
+| Image processing | dart:ui (canvas rendering) |
+| File storage | path_provider ^2.1.5 |
+| Sharing | share_plus ^10.1.4 |
+| ID generation | uuid ^4.5.1 |
 
 ## Kiến Trúc Quan Trọng
 
@@ -49,12 +54,34 @@ RewardState (daily unlock tracking) → key "reward_state"
 ### Display Architecture
 
 ```
-DateTimeWidgetProvider  ← AppWidget (4 sizes)
+DateTimeWidgetProvider  ← AppWidget (4 sizes, ImageView background)
 NotificationIconService ← Persistent notification (bitmap icon)
 FloatingBarService      ← Foreground service + overlay
 TimeTickService         ← ACTION_TIME_TICK receiver (updates all 3)
 BootReceiver            ← BOOT_COMPLETED (restart services)
 ```
+
+### Design Personalization (plan5)
+
+```
+WidgetDesign (ClockConfig + BackgroundConfig)
+  ↓
+DesignStorageService (CRUD, quota 3, SharedPreferences JSON list)
+  ↓
+EditorScreen (Background: None/Solid/Gradient/Image)
+  ↓ pick image → CropScreen (zoom+pan) → smart defaults
+  ↓
+ClockPreview (Stack: image → overlay → text)
+  ↓ apply
+HomeScreen._openMyDesigns()
+  → saveConfig() → WidgetBridge.updateWidgets()
+  → notifService.update() → FloatingBarBridge.update()
+  ↓ bake
+WidgetBridge.setWidgetBackground(widgetId, bitmapPath)
+  → Native: BitmapFactory.decodeFile → RemoteViews.setImageViewBitmap
+```
+
+**Bitmap caching:** Per `(designId, widgetId)`. Cleared on `onAppWidgetOptionsChanged` (user resize).
 
 ## Quyết Định Kiến Trúc Đã Chốt
 
@@ -70,6 +97,9 @@ BootReceiver            ← BOOT_COMPLETED (restart services)
 | 8 | No ads outside app | Google Play policy | plan1 §4 |
 | 9 | No backend/account | Offline-first, simpler | plan1 scope |
 | 10 | JSON regex parsing (not JSON lib) | Config flat, no extra deps | Known tradeoff |
+| 11 | Bitmap baked per widgetId (not shared) | Different sizes need different crops | plan5 §2.2 |
+| 12 | 480×480px max for baked bitmaps | Android 12+ bitmap memory limit | plan5 §2.3 |
+| 13 | Background not in SharedPreferences | Stored in WidgetDesign list only | plan5 design decision |
 
 ## Tech Debt Đã Known
 
@@ -78,3 +108,6 @@ BootReceiver            ← BOOT_COMPLETED (restart services)
 3. TimeTickService no auto-stop
 4. `parseClockData` uses regex (fragile for nested JSON)
 5. `formatTime` replaces ALL `a` characters
+6. BackgroundConfig not persisted to SharedPreferences (lost on restart)
+7. Native blur not implemented (Flutter preview only)
+8. Auto text contrast flag stored but not actively computed

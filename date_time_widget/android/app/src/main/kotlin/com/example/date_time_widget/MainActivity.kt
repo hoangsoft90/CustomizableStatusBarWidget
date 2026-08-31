@@ -43,6 +43,21 @@ class MainActivity : FlutterActivity() {
                 "requestWidgetPick" -> {
                     result.success(false)
                 }
+                "setWidgetBackground" -> {
+                    val widgetId = call.argument<Int>("widgetId")
+                    val bitmapPath = call.argument<String>("bitmapPath")
+                    if (widgetId != null) {
+                        DateTimeWidgetProvider.saveWidgetBackground(this, widgetId, bitmapPath)
+                    }
+                    result.success(true)
+                }
+                "getActiveWidgetIds" -> {
+                    val mgr = android.appwidget.AppWidgetManager.getInstance(this)
+                    val ids = mgr.getAppWidgetIds(
+                        android.content.ComponentName(this, DateTimeWidgetProvider::class.java)
+                    )
+                    result.success(ids?.toList())
+                }
                 else -> result.notImplemented()
             }
         }

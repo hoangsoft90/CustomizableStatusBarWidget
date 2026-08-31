@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../models/clock_config.dart';
+import '../models/widget_design.dart';
 import '../services/ads_service.dart';
+import '../services/design_storage_service.dart';
 import '../services/iap_service.dart';
 import '../services/floating_bar_bridge.dart';
 import '../services/notification_service.dart';
@@ -11,6 +13,7 @@ import '../services/widget_bridge.dart';
 import '../widgets/ad_banner.dart';
 import '../widgets/clock_preview.dart';
 import 'editor_screen.dart';
+import 'my_designs_screen.dart';
 import 'presets_screen.dart';
 import 'settings_screen.dart';
 
@@ -25,6 +28,7 @@ class HomeScreen extends StatefulWidget {
   final AdsService adsService;
   final IapService iapService;
   final RewardService rewardService;
+  final DesignStorageService designStorage;
 
   const HomeScreen({
     super.key,
@@ -32,6 +36,7 @@ class HomeScreen extends StatefulWidget {
     required this.adsService,
     required this.iapService,
     required this.rewardService,
+    required this.designStorage,
   });
 
   @override
@@ -41,6 +46,7 @@ class HomeScreen extends StatefulWidget {
 class HomeScreenState extends State<HomeScreen> {
   late ClockConfig _config;
   late NotificationService _notifService;
+  BackgroundConfig _background = const BackgroundConfig();
 
   /// Called from deep link when user taps widget
   void openEditorFromDeepLink() => _openEditor();
@@ -59,6 +65,7 @@ class HomeScreenState extends State<HomeScreen> {
         builder: (_) => EditorScreen(
           config: _config,
           storage: widget.storage,
+          initialBackground: _background,
         ),
       ),
     );
@@ -69,6 +76,34 @@ class HomeScreenState extends State<HomeScreen> {
       WidgetBridge.updateWidgets(configJson: configJson);
       _notifService.update();
       FloatingBarBridge.update(configJson: configJson);
+    }
+  }
+
+  Future<void> _openMyDesigns() async {
+    final design = await Navigator.of(context).push<WidgetDesign>(
+      MaterialPageRoute(
+        builder: (_) => MyDesignsScreen(
+          designStorage: widget.designStorage,
+          isPremium: _config.isPremium,
+        ),
+      ),
+    );
+    if (design != null && mounted) {
+      // Apply design: save clock config + set background
+      await widget.storage.saveConfig(design.clock);
+      setState(() {
+        _config = design.clock;
+        _background = design.background;
+      });
+      final configJson = design.clock.toJsonString();
+      WidgetBridge.updateWidgets(configJson: configJson);
+      _notifService.update();
+      FloatingBarBridge.update(configJson: configJson);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Design "${design.name}" applied')),
+        );
+      }
     }
   }
 
@@ -263,6 +298,13 @@ class HomeScreenState extends State<HomeScreen> {
                     icon: Icons.style_outlined,
                     label: 'Presets',
                     onTap: _openPresets,
+                  ),
+                  const SizedBox(height: 12),
+                  _ActionButton(
+                    icon: Icons.photo_library_outlined,
+                    label: 'My Designs',
+                    onTap: _openMyDesigns,
+                    subtitle: 'Custom backgrounds & saved styles',
                   ),
                   const SizedBox(height: 12),
 

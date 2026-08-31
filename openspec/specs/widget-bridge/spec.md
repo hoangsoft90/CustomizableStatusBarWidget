@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Bridges Flutter ↔ Native Android home-screen widget. When the user saves a new ClockConfig, this service triggers an immediate refresh of every widget instance.
+Bridges Flutter ↔ Native Android home-screen widget. When the user saves a new ClockConfig, this service triggers an immediate refresh of every widget instance. Also manages per-widget background bitmap paths.
 
 ## Requirements
 
@@ -41,3 +41,31 @@ All MethodChannel calls are wrapped in try-catch for `PlatformException`, silent
 - When any bridge method is called
 - Then `PlatformException` is caught and the method returns default value (false/void)
 - Reference: `lib/services/widget_bridge.dart:18-22`, `30-33`
+
+### R4: setWidgetBackground — per-widget bitmap path (plan5 §3)
+
+`setWidgetBackground(widgetId, bitmapPath)` saves the baked bitmap file path for a specific widget instance in SharedPreferences under key `widget_bg_{widgetId}`.
+
+**Scenario: Set background path**
+- Given `widgetId = 42`, `bitmapPath = '/data/.../designs/abc_42.png'`
+- When `WidgetBridge.setWidgetBackground(widgetId: 42, bitmapPath: '/data/.../designs/abc_42.png')` is called
+- Then native saves path to SharedPreferences `"widget_bg_42"`
+- And re-renders widget instance 42
+- Reference: `lib/services/widget_bridge.dart:36-48`
+
+**Scenario: Clear background**
+- Given `widgetId = 42` has a background path
+- When `WidgetBridge.setWidgetBackground(widgetId: 42, bitmapPath: null)` is called
+- Then native removes key `"widget_bg_42"` from SharedPreferences
+- And widget falls back to default dark background
+- Reference: `lib/services/widget_bridge.dart:36-48`
+
+### R5: getActiveWidgetIds — list all widget instances (plan5 §3)
+
+`getActiveWidgetIds()` returns a list of all active widget IDs from AppWidgetManager.
+
+**Scenario: Get widget IDs**
+- Given 2 widget instances on home screen (IDs: 5, 12)
+- When `WidgetBridge.getActiveWidgetIds()` is called
+- Then the result is `[5, 12]`
+- Reference: `lib/services/widget_bridge.dart:50-58`

@@ -2,13 +2,13 @@
 
 ## Purpose
 
-Entry point screen after app launch. Displays a live clock preview and provides access to all features via grouped action buttons. Supports deep link from home-screen widget tap.
+Entry point screen after app launch. Displays a live clock preview and provides access to all features via grouped action buttons. Supports deep link from home-screen widget tap. Manages background state for design personalization.
 
 ## Requirements
 
 ### R1: Live preview at top
 
-A `ClockPreview` widget is displayed at the top of the screen, rendering the current time/date/day from the loaded ClockConfig.
+A `ClockPreview` widget is displayed at the top of the screen, rendering the current time/date/day from the loaded ClockConfig. Now includes `background` parameter for design backgrounds.
 
 **Scenario: Preview shows current config**
 - Given a saved config with `fontSize: 40`, `color: '#FF0000'`
@@ -16,12 +16,18 @@ A `ClockPreview` widget is displayed at the top of the screen, rendering the cur
 - Then ClockPreview renders with `fontSize: 40` and red text
 - Reference: `lib/screens/home_screen.dart:103`
 
+**Scenario: Preview shows design background**
+- Given user applied a design with image background
+- When HomeScreen renders
+- Then `ClockPreview(config: _config, background: _background)` shows image behind text
+- Reference: `lib/screens/home_screen.dart:103`
+
 ### R2: Action buttons grouped by section
 
-Buttons are organized under 4 section headers in order:
+Buttons are organized under section headers in order:
 1. **STATUS BAR** — "Enable/Disable Notification"
 2. **HOME SCREEN** — "Add Widget"
-3. **CUSTOMIZE** — "Customize", "Presets"
+3. **CUSTOMIZE** — "Customize", "Presets", "My Designs"
 4. **FLOATING BAR** — "Enable/Disable Floating Bar"
 5. **Settings** (no section header)
 
@@ -29,7 +35,8 @@ Buttons are organized under 4 section headers in order:
 - Given HomeScreen is rendered
 - When user scrolls through the ListView
 - Then section headers appear in the order: STATUS BAR, HOME SCREEN, CUSTOMIZE, FLOATING BAR
-- Reference: `lib/screens/home_screen.dart:108-168`
+- And "My Designs" appears under CUSTOMIZE after "Presets"
+- Reference: `lib/screens/home_screen.dart:108-170`
 
 ### R3: Notification toggle
 
@@ -109,12 +116,54 @@ An `AdBanner` widget is placed at the very bottom of the screen, below the ListV
 - Then `AdBanner(show: true)` is in the widget tree
 - Reference: `lib/screens/home_screen.dart:171`
 
-### R9: Constructor accepts rewardService
+### R9: Constructor accepts rewardService and designStorage
 
-HomeScreen accepts a `RewardService` parameter and passes it to PresetsScreen.
+HomeScreen accepts a `RewardService` parameter and a `DesignStorageService` parameter. Passes rewardService to PresetsScreen and designStorage to MyDesignsScreen.
 
-**Scenario: RewardService passed to PresetsScreen**
-- Given HomeScreen is rendered with `rewardService`
-- When user opens Presets screen
-- Then `PresetsScreen(rewardService: widget.rewardService)` is constructed
-- Reference: `lib/screens/home_screen.dart:76-80`
+**Scenario: DesignStorageService passed to MyDesignsScreen**
+- Given HomeScreen is rendered with `designStorage`
+- When user opens My Designs screen
+- Then `MyDesignsScreen(designStorage: widget.designStorage)` is constructed
+- Reference: `lib/screens/home_screen.dart:82-86`
+
+### R10: My Designs button (plan5 §5)
+
+A "My Designs" button appears under the CUSTOMIZE section with subtitle "Custom backgrounds & saved styles". Tapping it navigates to MyDesignsScreen.
+
+**Scenario: Open My Designs**
+- Given HomeScreen is rendered
+- When user taps "My Designs"
+- Then `MyDesignsScreen(designStorage: widget.designStorage, isPremium: _config.isPremium)` is pushed
+- Reference: `lib/screens/home_screen.dart:155-158`
+
+### R11: Design apply flow (plan5 §5)
+
+When user returns from MyDesignsScreen with a `WidgetDesign`, HomeScreen:
+1. Saves `design.clock` to SharedPreferences
+2. Updates `_config` and `_background` state
+3. Calls `WidgetBridge.updateWidgets(configJson)`
+4. Calls `_notifService.update()`
+5. Calls `FloatingBarBridge.update(configJson)`
+6. Shows SnackBar "Design applied"
+
+This reuses the exact same update chain as Editor/Presets (plan5 §5: "tái sử dụng nguyên luồng update đã xác nhận đúng").
+
+**Scenario: Apply design**
+- Given user selected a design in MyDesignsScreen
+- When MyDesignsScreen pops with `WidgetDesign`
+- Then `storage.saveConfig(design.clock)` saves the clock config
+- And `setState` updates `_config` and `_background`
+- And all 3 surfaces are updated
+- And SnackBar shows "Design \"name\" applied"
+- Reference: `lib/screens/home_screen.dart:88-100`
+
+### R12: Background state management
+
+HomeScreen maintains a `_background` field (type `BackgroundConfig`) that tracks the current design's background. This is passed to `ClockPreview` and to `EditorScreen` as `initialBackground`.
+
+**Scenario: Background persists in state**
+- Given user applied a design with image background
+- When HomeScreen renders
+- Then `ClockPreview` receives `background: _background`
+- And if user opens Editor, `initialBackground: _background` is passed
+- Reference: `lib/screens/home_screen.dart:58`, `74`

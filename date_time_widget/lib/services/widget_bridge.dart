@@ -28,6 +28,34 @@ class WidgetBridge {
     }
   }
 
+  /// Save baked bitmap path for a specific widget instance.
+  ///
+  /// [widgetId] — the Android AppWidget ID.
+  /// [bitmapPath] — absolute path to the baked PNG file, or null to clear.
+  static Future<void> setWidgetBackground({
+    required int widgetId,
+    required String? bitmapPath,
+  }) async {
+    try {
+      await _channel.invokeMethod<void>('setWidgetBackground', {
+        'widgetId': widgetId,
+        'bitmapPath': bitmapPath,
+      });
+    } on PlatformException catch (_) {
+      // Widget channel not available
+    }
+  }
+
+  /// Get all active widget IDs.
+  static Future<List<int>> getActiveWidgetIds() async {
+    try {
+      final result = await _channel.invokeMethod<List<dynamic>>('getActiveWidgetIds');
+      return result?.cast<int>() ?? [];
+    } on PlatformException catch (_) {
+      return [];
+    }
+  }
+
   /// Ask the OS to open the widget picker so the user can add our widget
   /// to their home screen.  Returns `true` if the picker was opened.
   static Future<bool> requestWidgetPick() async {
