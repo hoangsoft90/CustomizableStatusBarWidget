@@ -183,6 +183,31 @@ class DateTimeWidgetProvider : AppWidgetProvider() {
             }
         }
 
+        private fun applyWidgetBackground(
+            context: Context,
+            views: RemoteViews,
+            widgetId: Int,
+        ) {
+            val prefs = context.getSharedPreferences(CONFIG_PREFS, Context.MODE_PRIVATE)
+            val bitmapPath = prefs.getString("widget_bg_$widgetId", null)
+
+            if (bitmapPath != null && File(bitmapPath).exists()) {
+                try {
+                    val bitmap = BitmapFactory.decodeFile(bitmapPath)
+                    if (bitmap != null) {
+                        views.setImageViewBitmap(R.id.widget_background, bitmap)
+                        views.setViewVisibility(R.id.widget_background, android.view.View.VISIBLE)
+                        return
+                    }
+                } catch (_: Exception) {
+                    // Fall through to default background
+                }
+            }
+
+            // No bitmap — hide ImageView, rely on default dark background
+            views.setViewVisibility(R.id.widget_background, android.view.View.GONE)
+        }
+
         private fun formatDisplay(cal: Calendar, config: ClockData): DisplayData {
             val date = cal.time
 
@@ -252,35 +277,6 @@ class DateTimeWidgetProvider : AppWidgetProvider() {
 
         // Re-render with current config (no bitmap until Flutter re-bakes)
         renderWidget(context, appWidgetManager, widgetId)
-    }
-
-    // ── Background rendering ──────────────────────────────
-
-    private fun applyWidgetBackground(
-        context: Context,
-        views: RemoteViews,
-        widgetId: Int,
-    ) {
-        val prefs = context.getSharedPreferences(CONFIG_PREFS, Context.MODE_PRIVATE)
-        val bitmapPath = prefs.getString("widget_bg_$widgetId", null)
-
-        if (bitmapPath != null && File(bitmapPath).exists()) {
-            try {
-                val bitmap = BitmapFactory.decodeFile(bitmapPath)
-                if (bitmap != null) {
-                    views.setImageViewBitmap(R.id.widget_background, bitmap)
-                    views.setViewVisibility(R.id.widget_background, android.view.View.VISIBLE)
-                    // Remove solid background when image is present
-                    // FrameLayout doesn't have android:background, so no need to clear
-                    return
-                }
-            } catch (_: Exception) {
-                // Fall through to default background
-            }
-        }
-
-        // No bitmap — hide ImageView, rely on default dark background
-        views.setViewVisibility(R.id.widget_background, android.view.View.GONE)
     }
 
     // ── Data classes ────────────────────────────────────────
