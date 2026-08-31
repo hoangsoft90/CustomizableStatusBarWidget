@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'screens/home_screen.dart';
@@ -9,33 +10,44 @@ import 'services/iap_service.dart';
 import 'services/reward_service.dart';
 import 'services/storage_service.dart';
 
+const _sentryDsn =
+    'https://804452b03a096aa2c383654938dd213c@o4505474077753344.ingest.us.sentry.io/4512003956015104';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Core storage
-  final storage = await StorageService.create();
-  final prefs = await SharedPreferences.getInstance();
+  await SentryFlutter.init(
+    (options) {
+      options.dsn = _sentryDsn;
+      options.tracesSampleRate = 1.0; // 100% traces in debug
+    },
+    appRunner: () async {
+      // Core storage
+      final storage = await StorageService.create();
+      final prefs = await SharedPreferences.getInstance();
 
-  // Design storage (My Designs)
-  final designStorage = await DesignStorageService.create();
+      // Design storage (My Designs)
+      final designStorage = await DesignStorageService.create();
 
-  // Reward service (daily unlock tracking)
-  final rewardService = RewardService(prefs);
-  await rewardService.resetIfNewDay();
+      // Reward service (daily unlock tracking)
+      final rewardService = RewardService(prefs);
+      await rewardService.resetIfNewDay();
 
-  // Ads + IAP
-  await AdsService.init();
-  final adsService = AdsService(storage, rewardService);
-  final iapService = IapService(storage);
-  await iapService.init();
+      // Ads + IAP
+      await AdsService.init();
+      final adsService = AdsService(storage, rewardService);
+      final iapService = IapService(storage);
+      await iapService.init();
 
-  runApp(DateWidgetApp(
-    storage: storage,
-    designStorage: designStorage,
-    adsService: adsService,
-    iapService: iapService,
-    rewardService: rewardService,
-  ));
+      runApp(DateWidgetApp(
+        storage: storage,
+        designStorage: designStorage,
+        adsService: adsService,
+        iapService: iapService,
+        rewardService: rewardService,
+      ));
+    },
+  );
 }
 
 class DateWidgetApp extends StatefulWidget {
@@ -118,6 +130,7 @@ class _DateWidgetAppState extends State<DateWidgetApp>
         useMaterial3: true,
       ),
       themeMode: ThemeMode.system,
+      navigatorObservers: [SentryNavigatorObserver()],
       home: HomeScreen(
         key: _homeKey,
         storage: widget.storage,
