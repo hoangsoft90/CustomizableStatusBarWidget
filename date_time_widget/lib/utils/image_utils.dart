@@ -5,6 +5,8 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/painting.dart';
 
+import '../models/widget_design.dart';
+
 /// Maximum dimension (width or height) for source images stored in app documents.
 /// Plan5 §3: "max cạnh 1600px".
 const int maxSourceDimension = 1600;
@@ -143,5 +145,133 @@ class ImageUtils {
     final file = File(destinationPath);
     await file.writeAsBytes(bitmapBytes);
     return destinationPath;
+  }
+
+  /// Bake a [BackgroundConfig] into a PNG bitmap at widget size.
+  ///
+  /// For [BackgroundType.none], returns `null` (no bitmap needed).
+  /// For [BackgroundType.solid] / [BackgroundType.gradient], renders a
+  /// color/gradient rectangle. For [BackgroundType.image], loads,
+  /// crops, and overlays the source image.
+  static Future<Uint8List?> bakeBackgroundBitmap({
+    required BackgroundConfig background,
+    required int width,
+    required int height,
+  }) async {
+    if (background.type == BackgroundType.none) return null;
+
+    final cappedW = min(width, maxBakedDimension);
+    final cappedH = min(height, maxBakedDimension);
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    final size = Size(cappedW.toDouble(), cappedH.toDouble());
+    // ignore: unnecessary_import
+    // Canvas, Paint, Rect, Size, FilterQuality are re-exported
+    // from package:flutter/painting.dart via dart:ui
+
+    switch (background.type) {
+      case BackgroundType.solid:
+        final hex = (background.solidColor ?? '#1A1A2E')
+            .replaceFirst('#', '');
+        final color =
+            Color(int.parse('FF$hex', radix: 16));
+        canvas.drawRect(
+          Rect.fromLTWH(0, 0, size.width, size.height),
+          Paint()..color = color,
+        );
+
+      case BackgroundType.gradient:
+        final colors = background.gradientColors
+                ?.map((h) {
+                  final hex = h.replaceFirst('#', '');
+                  return Color(int.parse('FF$hex', radix: 16));
+                })
+                .toList() ??
+            [const Color(0xFF1A1A2E), const Color(0xFF16213E)];
+        final rect =
+            Rect.fromLTWH(0, 0, size.width, size.height);
+        final gradient = LinearGradient(
+          colors: colors,
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        );
+        canvas.drawRect(
+          rect,
+          Paint()..shader = gradient.createShader(rect),
+        );
+
+      case BackgroundType.image:
+        final path = background.imagePath;
+        if (path == null || !File(path).existsSync()) return null;
+
+        final bytes =
+            Uint8List.fromList(await File(path).readAsBytes());
+        final codec = await ui.instantiateImageCodec(bytes);
+        final frame = await codec.getNextFrame();
+        final src = frame.image;
+
+        // Crop region calculation
+        final srcW = src.width.toDouble();
+        final srcH = src.height.toDouble();
+        final scale = background.cropScale;
+        final cropW = srcW / scale;
+        final cropH = srcH / scale;
+        final cropX =
+            srcW * background.cropOffsetX - cropW / 2;
+        final cropY =
+            srcH * background.cropOffsetY - cropH / 2;
+
+        canvas.drawImageRect(
+          src,
+          Rect.fromLTWH(
+            cropX.clamp(0, srcW - cropW),
+            cropY.clamp(0, srcH - cropH),
+            cropW,
+            cropH,
+          ),
+          Rect.fromLTWH(
+            0,
+            0,
+            size.width,
+            size.height,
+          ),
+          Paint()
+            ..filterQuality = FilterQuality.high,
+        );
+
+        // Overlay
+        if (background.overlayMode != OverlayMode.none &&
+            background.overlayOpacity > 0) {
+          final overlayColor =
+              background.overlayMode == OverlayMode.dark
+                  ? const Color(0xFF000000)
+                  : const Color(0xFFFFFFFF);
+          canvas.drawRect(
+            Rect.fromLTWH(
+              0,
+              0,
+              size.width,
+              size.height,
+            ),
+            Paint()
+              ..color = overlayColor
+                  .withValues(alpha: background.overlayOpacity),
+          );
+        }
+
+        src.dispose();
+
+      case BackgroundType.none:
+        return null;
+    }
+
+    final picture = recorder.endRecording();
+    final image =
+        await picture.toImage(cappedW, cappedH);
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+    picture.dispose();
+    image.dispose();
+
+    return byteData?.buffer.asUint8List();
   }
 }

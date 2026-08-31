@@ -1,6 +1,9 @@
+import 'dart:convert';
+
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/clock_config.dart';
+import '../models/widget_design.dart';
 
 /// Persists [ClockConfig] and app-level state using [SharedPreferences].
 ///
@@ -35,6 +38,28 @@ class StorageService {
   /// Persist [ClockConfig] to shared preferences.
   Future<bool> saveConfig(ClockConfig config) {
     return _prefs.setString(_configKey, config.toJsonString());
+  }
+
+  // ── BackgroundConfig ────────────────────────────────────
+
+  static const String _backgroundKey = 'widget_background';
+
+  /// Load the persisted [BackgroundConfig], or return default
+  /// (none) if nothing has been saved yet.
+  BackgroundConfig loadBackground() {
+    final jsonString = _prefs.getString(_backgroundKey);
+    if (jsonString == null) return const BackgroundConfig();
+    try {
+      final map = jsonDecode(jsonString) as Map<String, dynamic>;
+      return BackgroundConfig.fromJson(map);
+    } catch (_) {
+      return const BackgroundConfig();
+    }
+  }
+
+  /// Persist [BackgroundConfig] to shared preferences.
+  Future<bool> saveBackground(BackgroundConfig background) {
+    return _prefs.setString(_backgroundKey, jsonEncode(background.toJson()));
   }
 
   // ── Helpers ──────────────────────────────────────────────

@@ -7,6 +7,7 @@ import 'package:uuid/uuid.dart';
 
 import '../models/clock_config.dart';
 import '../models/widget_design.dart';
+import '../services/design_storage_service.dart';
 import '../services/storage_service.dart';
 import '../services/widget_bridge.dart';
 import '../utils/image_utils.dart';
@@ -61,6 +62,7 @@ class EditorScreenResult {
 class EditorScreen extends StatefulWidget {
   final ClockConfig config;
   final StorageService? storage;
+  final DesignStorageService? designStorage;
 
   /// Optional existing background to edit (for My Designs flow).
   final BackgroundConfig? initialBackground;
@@ -69,6 +71,7 @@ class EditorScreen extends StatefulWidget {
     super.key,
     required this.config,
     this.storage,
+    this.designStorage,
     this.initialBackground,
   });
 
@@ -137,7 +140,10 @@ class _EditorScreenState extends State<EditorScreen> {
       ),
     );
     if (discard == true && mounted) {
-      Navigator.of(context).pop(_savedConfig);
+      Navigator.of(context).pop(EditorScreenResult(
+        config: _savedConfig,
+        background: _savedBackground,
+      ));
     }
   }
 
@@ -146,11 +152,19 @@ class _EditorScreenState extends State<EditorScreen> {
     _savedBackground = _background;
 
     if (widget.storage != null) {
-      // Global config save flow (existing behavior)
+      // Global config save flow
       await widget.storage!.saveConfig(_config);
+
+      // Bake background bitmap for native widget
+      await _bakeAndSetWidgetBackground();
+
       WidgetBridge.updateWidgets();
       if (mounted) {
-        Navigator.of(context).pop(_config);
+        // Return both config AND background so HomeScreen can persist
+        Navigator.of(context).pop(EditorScreenResult(
+          config: _config,
+          background: _background,
+        ));
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Config saved')),
         );
@@ -163,6 +177,44 @@ class _EditorScreenState extends State<EditorScreen> {
           background: _background,
         ));
       }
+    }
+  }
+
+  /// Bake the background to a bitmap and push it to the native widget.
+  Future<void> _bakeAndSetWidgetBackground() async {
+    if (_background.type == BackgroundType.none) return;
+
+    try {
+      // Get all active widget IDs
+      final widgetIds = await WidgetBridge.getActiveWidgetIds();
+      if (widgetIds.isEmpty) return;
+
+      // Bake background at max widget size (480×480)
+      final bitmapBytes = await ImageUtils.bakeBackgroundBitmap(
+        background: _background,
+        width: 480,
+        height: 480,
+      );
+      if (bitmapBytes == null) return;
+
+      // Save bitmap to disk
+      final appDir = await getApplicationDocumentsDirectory();
+      final bgDir = Directory('${appDir.path}/widget_bg');
+      if (!await bgDir.exists()) {
+        await bgDir.create(recursive: true);
+      }
+      final bgFile = File('${bgDir.path}/current_bg.png');
+      await bgFile.writeAsBytes(bitmapBytes);
+
+      // Push to each widget instance
+      for (final widgetId in widgetIds) {
+        await WidgetBridge.setWidgetBackground(
+          widgetId: widgetId,
+          bitmapPath: bgFile.path,
+        );
+      }
+    } catch (_) {
+      // Best-effort — don't crash the save flow
     }
   }
 

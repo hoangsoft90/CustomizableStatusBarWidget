@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../models/clock_config.dart';
 import '../models/widget_design.dart';
@@ -10,6 +13,7 @@ import '../services/notification_service.dart';
 import '../services/reward_service.dart';
 import '../services/storage_service.dart';
 import '../services/widget_bridge.dart';
+import '../utils/image_utils.dart';
 import '../widgets/ad_banner.dart';
 import '../widgets/clock_preview.dart';
 import 'editor_screen.dart';
@@ -55,24 +59,30 @@ class HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _config = widget.storage.loadConfig();
+    _background = widget.storage.loadBackground();
     _notifService = NotificationService(widget.storage);
     widget.adsService.preloadRewarded();
   }
 
   Future<void> _openEditor() async {
-    final updated = await Navigator.of(context).push<ClockConfig>(
+    final result = await Navigator.of(context).push<EditorScreenResult>(
       MaterialPageRoute(
         builder: (_) => EditorScreen(
           config: _config,
           storage: widget.storage,
+          designStorage: widget.designStorage,
           initialBackground: _background,
         ),
       ),
     );
-    if (updated != null && mounted) {
-      await widget.storage.saveConfig(updated);
-      setState(() => _config = updated);
-      final configJson = updated.toJsonString();
+    if (result != null && mounted) {
+      await widget.storage.saveConfig(result.config);
+      await widget.storage.saveBackground(result.background);
+      setState(() {
+        _config = result.config;
+        _background = result.background;
+      });
+      final configJson = result.config.toJsonString();
       WidgetBridge.updateWidgets(configJson: configJson);
       _notifService.update();
       FloatingBarBridge.update(configJson: configJson);
@@ -91,12 +101,17 @@ class HomeScreenState extends State<HomeScreen> {
     if (design != null && mounted) {
       // Apply design: save clock config + set background
       await widget.storage.saveConfig(design.clock);
+      await widget.storage.saveBackground(design.background);
       setState(() {
         _config = design.clock;
         _background = design.background;
       });
       final configJson = design.clock.toJsonString();
       WidgetBridge.updateWidgets(configJson: configJson);
+
+      // Bake and push background to native widget
+      await _bakeAndSetWidgetBackground(design.background);
+
       _notifService.update();
       FloatingBarBridge.update(configJson: configJson);
       if (mounted) {
@@ -104,6 +119,50 @@ class HomeScreenState extends State<HomeScreen> {
           SnackBar(content: Text('Design "${design.name}" applied')),
         );
       }
+    }
+  }
+
+  /// Bake background bitmap and push to all active native widgets.
+  Future<void> _bakeAndSetWidgetBackground(BackgroundConfig bg) async {
+    if (bg.type == BackgroundType.none) {
+      // Clear background on all widgets
+      final widgetIds = await WidgetBridge.getActiveWidgetIds();
+      for (final id in widgetIds) {
+        await WidgetBridge.setWidgetBackground(
+          widgetId: id,
+          bitmapPath: null,
+        );
+      }
+      return;
+    }
+
+    try {
+      final widgetIds = await WidgetBridge.getActiveWidgetIds();
+      if (widgetIds.isEmpty) return;
+
+      final bitmapBytes = await ImageUtils.bakeBackgroundBitmap(
+        background: bg,
+        width: 480,
+        height: 480,
+      );
+      if (bitmapBytes == null) return;
+
+      final appDir = await getApplicationDocumentsDirectory();
+      final bgDir = Directory('${appDir.path}/widget_bg');
+      if (!await bgDir.exists()) {
+        await bgDir.create(recursive: true);
+      }
+      final bgFile = File('${bgDir.path}/current_bg.png');
+      await bgFile.writeAsBytes(bitmapBytes);
+
+      for (final id in widgetIds) {
+        await WidgetBridge.setWidgetBackground(
+          widgetId: id,
+          bitmapPath: bgFile.path,
+        );
+      }
+    } catch (_) {
+      // Best-effort
     }
   }
 
