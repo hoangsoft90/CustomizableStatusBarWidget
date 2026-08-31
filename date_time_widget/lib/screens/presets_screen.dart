@@ -62,6 +62,8 @@ class _PresetsScreenState extends State<PresetsScreen> {
       return;
     }
 
+    final preset = builtInPresets.firstWhere((p) => p.id == presetId);
+
     final unlocked = await ads.unlockPreset(
       context,
       presetId,

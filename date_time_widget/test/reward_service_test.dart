@@ -16,7 +16,7 @@ void main() {
     await prefs.clear();
   });
 
-  String _today() {
+  String today() {
     final now = DateTime.now();
     return '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
   }
@@ -42,7 +42,7 @@ void main() {
     test('does NOT reset when same day', () async {
       await prefs.setString(
         'reward_state',
-        '{"date":"${_today()}","unlockCount":1,"unlockedToday":["premium1"]}',
+        '{"date":"${today()}","unlockCount":1,"unlockedToday":["premium1"]}',
       );
 
       await service.resetIfNewDay();
