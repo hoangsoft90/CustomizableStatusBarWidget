@@ -30,10 +30,16 @@ Manages AdMob ads: Adaptive Banner creation, Rewarded Video preload/show, and pr
 `preloadRewarded()` loads a `RewardedAd`. `showRewardedAd()` shows it and returns `true` if the user watched to completion.
 
 **Scenario: Preload success**
-- Given `isPremium == false`
+- Given `isPremium == false` and `remainingUnlocksToday() > 0`
 - When `preloadRewarded()` completes
 - Then `_rewardedAd` is non-null (if ad was available)
 - Reference: `lib/services/ads_service.dart:50-62`
+
+**Scenario: Preload skipped when no unlocks remaining**
+- Given `remainingUnlocksToday() == 0`
+- When `preloadRewarded()` is called
+- Then it returns immediately without loading an ad
+- Reference: `lib/services/ads_service.dart:52-53`
 
 **Scenario: Show and earn reward**
 - Given a preloaded rewarded ad
@@ -76,23 +82,40 @@ If `isPremium == true`, all ad methods return immediately without showing ads.
 - Then `showBanners == true`
 - Reference: `lib/services/ads_service.dart:46`
 
-### R7: unlockPreset flow
+### R7: unlockPreset flow (daily reward)
 
-Full flow: show confirmation dialog → showRewarded ad → if earned, add presetId to unlockedPresets and save config. If not earned, show error SnackBar.
+Full flow: check remaining unlocks → show confirmation dialog ("today" wording) → showRewarded ad → if earned, call `rewardService.unlockToday(presetId)`. If no remaining unlocks, stops preload and shows message.
+
+Note: In plan3_final.md Task B, this was changed from permanent unlock (`unlockedPresets`) to daily unlock via `RewardService`.
 
 **Scenario: Unlock success**
 - Given user taps a locked preset
+- And `remainingUnlocksToday() > 0`
 - And user watches ad to completion
 - When `unlockPreset` returns
-- Then `config.unlockedPresets` contains the preset ID
-- And config is saved to storage
+- Then `rewardService.unlockToday(presetId)` was called
+- And the preset is usable for the rest of today
 - Reference: `lib/services/ads_service.dart:100-142`
+
+**Scenario: No remaining unlocks**
+- Given `remainingUnlocksToday() == 0`
+- When user taps a locked preset
+- Then a SnackBar "No more unlocks today. Try again tomorrow." is shown
+- And the ad is not shown
+- Reference: `lib/services/ads_service.dart:113-121`
 
 **Scenario: Ad not available**
 - Given user taps "Watch" but ad fails to load
 - When `showRewardedAd` returns `false`
 - Then a SnackBar "Ad not available. Please try again later." is shown
 - Reference: `lib/services/ads_service.dart:133-139`
+
+**Scenario: Dialog says "today" not "forever"**
+- Given user taps a locked preset with remaining unlocks
+- When the confirmation dialog appears
+- Then the text reads "Watch a short ad to use this preset today?"
+- And it shows the remaining unlocks count
+- Reference: `lib/services/ads_service.dart:124-131`
 
 ### R8: Cleanup
 

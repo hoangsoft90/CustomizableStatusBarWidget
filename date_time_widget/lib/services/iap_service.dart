@@ -101,16 +101,9 @@ class IapService {
     if (isPremium) return; // already marked
 
     final config = _storage.loadConfig();
-    final allPresetIds = [
-      'basic1', 'basic2', 'basic3', 'basic4',
-      'basic5', 'basic6', 'premium1', 'premium2',
-    ];
-    final updated = config.copyWith(
-      isPremium: true,
-      unlockedPresets: allPresetIds,
-    );
+    final updated = config.copyWith(isPremium: true);
     await _storage.saveConfig(updated);
-    dev.log('IAP: marked as premium, all presets unlocked');
+    dev.log('IAP: marked as premium');
   }
 
   // ── Cleanup ───────────────────────────────────────────────

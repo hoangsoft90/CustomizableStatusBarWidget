@@ -43,16 +43,17 @@ Two options: `'HH:mm'` (24h) and `'hh:mm a'` (12h), displayed as ChoiceChips.
 
 ### R4: Display toggles
 
-Three Switch rows:
+Two Switch rows:
 - "Show day of week" → `showDay`
 - "Show date" → `showDate`
-- "Show seconds" → `showSeconds`
 
-**Scenario: Toggle seconds**
-- Given `showSeconds = false`
-- When user toggles "Show seconds" on
-- Then `showSeconds = true`
-- Reference: `lib/screens/editor_screen.dart:132-145`
+Note: "Show seconds" toggle was removed in plan3_final.md Task A — seconds are no longer supported (caused double-seconds bug on Android native).
+
+**Scenario: Toggle day**
+- Given `showDay = false`
+- When user toggles "Show day of week" on
+- Then `showDay = true`
+- Reference: `lib/screens/editor_screen.dart:132-143`
 
 ### R5: Font size slider
 

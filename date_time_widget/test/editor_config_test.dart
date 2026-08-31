@@ -12,12 +12,6 @@ void main() {
       expect(updated.fontSize, 32);
     });
 
-    test('toggle showSeconds', () {
-      const config = ClockConfig(showSeconds: false);
-      final updated = config.copyWith(showSeconds: true);
-      expect(updated.showSeconds, true);
-    });
-
     test('update fontSize', () {
       const config = ClockConfig(fontSize: 32);
       final updated = config.copyWith(fontSize: 24);
@@ -36,14 +30,6 @@ void main() {
       expect(updated.alignment, 'left');
     });
 
-    test('update unlockedPresets', () {
-      const config = ClockConfig(unlockedPresets: ['basic1', 'basic2']);
-      final updated = config.copyWith(
-        unlockedPresets: ['basic1', 'basic2', 'premium1'],
-      );
-      expect(updated.unlockedPresets, ['basic1', 'basic2', 'premium1']);
-    });
-
     test('chain of copyWith preserves earlier changes', () {
       const config = ClockConfig();
       final result = config
@@ -55,7 +41,6 @@ void main() {
       expect(result.fontSize, 20);
       // defaults preserved
       expect(result.color, '#FFFFFF');
-      expect(result.showSeconds, false);
     });
 
     test('serialise → deserialise preserves all editor changes', () {
@@ -64,7 +49,6 @@ void main() {
           .copyWith(
             format: 'EEEE, MMMM d',
             timeFormat: 'hh:mm a',
-            showSeconds: true,
             showDay: false,
             fontSize: 18,
             color: '#00E676',

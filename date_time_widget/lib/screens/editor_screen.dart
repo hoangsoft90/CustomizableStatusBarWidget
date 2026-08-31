@@ -193,12 +193,6 @@ class _EditorScreenState extends State<EditorScreen> {
                   onChanged: (v) =>
                       _update((c) => c.copyWith(showDate: v)),
                 ),
-                _ToggleRow(
-                  label: 'Show seconds',
-                  value: _config.showSeconds,
-                  onChanged: (v) =>
-                      _update((c) => c.copyWith(showSeconds: v)),
-                ),
                 const SizedBox(height: 20),
 
                 // ── Font Size ──

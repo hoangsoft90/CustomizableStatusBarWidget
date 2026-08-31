@@ -29,7 +29,7 @@ Manages the "Remove Ads & Unlock All" one-time, non-consumable in-app purchase v
 **Scenario: Successful purchase**
 - Given `_product` is loaded and `isPremium == false`
 - When `buy()` is called and user completes purchase
-- Then `_handlePurchase` sets `isPremium = true` and unlocks all presets
+- Then `_handlePurchase` sets `isPremium = true`
 - And the purchase is acknowledged via `completePurchase`
 - Reference: `lib/services/iap_service.dart:48-56`
 
@@ -61,15 +61,17 @@ Manages the "Remove Ads & Unlock All" one-time, non-consumable in-app purchase v
 - And `_iap.completePurchase(purchase)` is called
 - Reference: `lib/services/iap_service.dart:70-78`
 
-### R5: _markPremium sets isPremium + all presets
+### R5: _markPremium sets isPremium only
 
-`_markPremium()` sets `isPremium: true` and `unlockedPresets` to all 8 preset IDs.
+`_markPremium()` sets `isPremium: true`. It no longer sets `unlockedPresets` — reward state is tracked separately in `RewardService`.
+
+Note: In plan3_final.md Task B, the `unlockedPresets: allPresetIds` line was removed. Premium users bypass all lock checks via `isPremium` flag alone.
 
 **Scenario: Mark premium**
 - When `_markPremium()` is called
 - Then config has `isPremium: true`
-- And `unlockedPresets` contains `['basic1','basic2','basic3','basic4','basic5','basic6','premium1','premium2']`
-- Reference: `lib/services/iap_service.dart:81-91`
+- And the config does NOT contain `unlockedPresets` (field removed from ClockConfig)
+- Reference: `lib/services/iap_service.dart:81-88`
 
 **Scenario: Idempotent**
 - Given `isPremium` is already `true`

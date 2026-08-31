@@ -10,24 +10,13 @@ class DateFormatter {
     final h24 = now.hour;
     final h12 = h24 == 0 ? 12 : (h24 > 12 ? h24 - 12 : h24);
     final mm = _pad(now.minute);
-    final ss = _pad(now.second);
     final period = h24 >= 12 ? 'PM' : 'AM';
 
     result = result.replaceAll('HH', _pad(h24));
     result = result.replaceAll('hh', _pad(h12));
     result = result.replaceAll('mm', mm);
 
-    if (config.showSeconds) {
-      result = result.replaceAll('ss', ss);
-    } else {
-      result = result.replaceAll(':ss', '').replaceAll('ss', '');
-    }
-
     result = result.replaceAll('a', period);
-
-    // Clean up trailing/leading colons if seconds were removed
-    result = result.replaceAll(RegExp(r':$'), '');
-    result = result.replaceAll(RegExp(r'^:'), '');
 
     return result;
   }

@@ -34,8 +34,7 @@ const List<Preset> builtInPresets = [
     description: 'Cool blue digital clock style.',
     config: ClockConfig(
       format: 'dd/MM/yyyy',
-      timeFormat: 'HH:mm:ss',
-      showSeconds: true,
+      timeFormat: 'HH:mm',
       fontSize: 30,
       color: '#2196F3',
       alignment: 'center',
@@ -100,8 +99,7 @@ const List<Preset> builtInPresets = [
     description: 'Eye-catching neon green for dark themes.',
     config: ClockConfig(
       format: 'EEE dd MMM',
-      timeFormat: 'HH:mm:ss',
-      showSeconds: true,
+      timeFormat: 'HH:mm',
       fontSize: 30,
       color: '#00E676',
       alignment: 'left',

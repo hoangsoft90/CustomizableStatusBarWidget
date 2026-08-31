@@ -108,3 +108,13 @@ An `AdBanner` widget is placed at the very bottom of the screen, below the ListV
 - When HomeScreen renders
 - Then `AdBanner(show: true)` is in the widget tree
 - Reference: `lib/screens/home_screen.dart:171`
+
+### R9: Constructor accepts rewardService
+
+HomeScreen accepts a `RewardService` parameter and passes it to PresetsScreen.
+
+**Scenario: RewardService passed to PresetsScreen**
+- Given HomeScreen is rendered with `rewardService`
+- When user opens Presets screen
+- Then `PresetsScreen(rewardService: widget.rewardService)` is constructed
+- Reference: `lib/screens/home_screen.dart:76-80`

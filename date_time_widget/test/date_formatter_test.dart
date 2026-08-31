@@ -7,36 +7,31 @@ void main() {
   final testDate = DateTime(2026, 8, 30, 8, 35, 42);
 
   group('DateFormatter.formatTime', () {
-    test('24h format without seconds', () {
-      const config = ClockConfig(timeFormat: 'HH:mm', showSeconds: false);
+    test('24h format', () {
+      const config = ClockConfig(timeFormat: 'HH:mm');
       expect(DateFormatter.formatTime(testDate, config), '08:35');
     });
 
-    test('24h format with seconds', () {
-      const config = ClockConfig(timeFormat: 'HH:mm:ss', showSeconds: true);
-      expect(DateFormatter.formatTime(testDate, config), '08:35:42');
-    });
-
-    test('12h format', () {
-      const config = ClockConfig(timeFormat: 'hh:mm a', showSeconds: false);
+    test('12h format AM', () {
+      const config = ClockConfig(timeFormat: 'hh:mm a');
       expect(DateFormatter.formatTime(testDate, config), '08:35 AM');
     });
 
     test('12h format PM', () {
       final pm = DateTime(2026, 8, 30, 20, 15, 0);
-      const config = ClockConfig(timeFormat: 'hh:mm a', showSeconds: false);
+      const config = ClockConfig(timeFormat: 'hh:mm a');
       expect(DateFormatter.formatTime(pm, config), '08:15 PM');
     });
 
     test('12h midnight', () {
       final midnight = DateTime(2026, 8, 30, 0, 0, 0);
-      const config = ClockConfig(timeFormat: 'hh:mm a', showSeconds: false);
+      const config = ClockConfig(timeFormat: 'hh:mm a');
       expect(DateFormatter.formatTime(midnight, config), '12:00 AM');
     });
 
     test('12h noon', () {
       final noon = DateTime(2026, 8, 30, 12, 0, 0);
-      const config = ClockConfig(timeFormat: 'hh:mm a', showSeconds: false);
+      const config = ClockConfig(timeFormat: 'hh:mm a');
       expect(DateFormatter.formatTime(noon, config), '12:00 PM');
     });
   });

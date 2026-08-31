@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import '../models/clock_config.dart';
 import '../models/presets.dart';
 import '../services/ads_service.dart';
+import '../services/reward_service.dart';
 import '../services/storage_service.dart';
-import '../services/widget_bridge.dart';
 import '../widgets/preset_card.dart';
 
 /// Screen showing all built-in presets in a grid.
@@ -15,12 +15,14 @@ class PresetsScreen extends StatefulWidget {
   final ClockConfig currentConfig;
   final AdsService? adsService;
   final StorageService? storage;
+  final RewardService? rewardService;
 
   const PresetsScreen({
     super.key,
     required this.currentConfig,
     this.adsService,
     this.storage,
+    this.rewardService,
   });
 
   @override
@@ -33,6 +35,8 @@ class _PresetsScreenState extends State<PresetsScreen> {
   @override
   void initState() {
     super.initState();
+    // Reset reward state if new day
+    widget.rewardService?.resetIfNewDay();
     // Try to match current config to a preset
     for (final p in builtInPresets) {
       if (p.config == widget.currentConfig) {
@@ -44,34 +48,39 @@ class _PresetsScreenState extends State<PresetsScreen> {
 
   void _onSelect(String presetId, ClockConfig config) {
     setState(() => _selectedId = presetId);
-    WidgetBridge.updateWidgets();
     Navigator.of(context).pop(config);
   }
 
   Future<void> _onLockedTap(String presetId, String name) async {
     final ads = widget.adsService;
     final storage = widget.storage;
-    if (ads == null || storage == null) {
+    final reward = widget.rewardService;
+    if (ads == null || storage == null || reward == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('"$name" is locked — watch an ad to unlock.')),
       );
       return;
     }
 
-    final unlocked = await ads.unlockPreset(context, presetId, widget.currentConfig);
+    final unlocked = await ads.unlockPreset(
+      context,
+      presetId,
+      widget.currentConfig,
+      isFreePreset: false,
+    );
     if (unlocked && mounted) {
-      final updatedConfig = storage.loadConfig();
       setState(() => _selectedId = presetId);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('"$name" unlocked!')),
+        SnackBar(content: Text('"$name" unlocked for today!')),
       );
-      WidgetBridge.updateWidgets();
-      Navigator.of(context).pop(updatedConfig);
+      Navigator.of(context).pop(preset.config);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final reward = widget.rewardService;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Presets')),
       body: Padding(
@@ -86,14 +95,19 @@ class _PresetsScreenState extends State<PresetsScreen> {
           itemCount: builtInPresets.length,
           itemBuilder: (context, index) {
             final preset = builtInPresets[index];
-            final isUnlocked = !preset.isLocked ||
-                widget.currentConfig.unlockedPresets.contains(preset.id) ||
-                widget.currentConfig.isPremium;
+            final isFreePreset = !preset.isLocked;
+            final isUsable = reward != null
+                ? reward.canUsePreset(
+                    preset.id,
+                    isPremium: widget.currentConfig.isPremium,
+                    isFreePreset: isFreePreset,
+                  )
+                : (isFreePreset || widget.currentConfig.isPremium);
 
             return PresetCard(
               preset: preset,
               isSelected: _selectedId == preset.id,
-              onTap: isUnlocked
+              onTap: isUsable
                   ? () => _onSelect(preset.id, preset.config)
                   : () => _onLockedTap(preset.id, preset.name),
             );

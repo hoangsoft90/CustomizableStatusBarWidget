@@ -23,10 +23,12 @@ Six presets have `isLocked: false`.
 |----|------|-------|------------|---------|
 | basic1 | Classic White | #FFFFFF | HH:mm | default |
 | basic2 | Modern Black | #000000 | HH:mm | left aligned |
-| basic3 | Digital Blue | #2196F3 | HH:mm:ss | showSeconds |
+| basic3 | Digital Blue | #2196F3 | HH:mm | 30px font |
 | basic4 | Warm Gold | #FFC107 | hh:mm a | 12h format |
 | basic5 | Compact | #9E9E9E | HH:mm | fontSize 20 |
 | basic6 | Date Only | #FFFFFF | HH:mm | no time shown explicitly |
+
+Note: basic3 previously had `HH:mm:ss` with `showSeconds: true` — changed to `HH:mm` in plan3_final.md Task A (seconds removed due to Android native bug).
 
 **Scenario: Free presets are not locked**
 - Given `builtInPresets.where((p) => !p.isLocked)`
@@ -34,20 +36,16 @@ Six presets have `isLocked: false`.
 - And all have `isLocked: false`
 - Reference: `lib/models/presets.dart:8-68`
 
-**Scenario: Default unlocked presets match first two**
-- Given `ClockConfig().unlockedPresets`
-- Then the value is `['basic1', 'basic2']`
-- And these correspond to the first two free presets
-- Reference: `lib/models/clock_config.dart:39`
-
 ### R3: 2 locked presets
 
 Two presets have `isLocked: true` and require rewarded ad or premium.
 
-| id | name | color | notable |
-|----|------|-------|---------|
-| premium1 | Sunset Gradient | #FF5722 | 34px font |
-| premium2 | Neon Green | #00E676 | showSeconds |
+| id | name | color | timeFormat | notable |
+|----|------|-------|------------|---------|
+| premium1 | Sunset Gradient | #FF5722 | HH:mm | 34px font |
+| premium2 | Neon Green | #00E676 | HH:mm | 30px font |
+
+Note: premium2 previously had `HH:mm:ss` with `showSeconds: true` — changed to `HH:mm` in plan3_final.md Task A.
 
 **Scenario: Locked presets require ad or premium**
 - Given `builtInPresets.where((p) => p.isLocked)`

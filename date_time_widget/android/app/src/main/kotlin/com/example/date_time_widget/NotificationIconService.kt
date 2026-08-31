@@ -99,14 +99,9 @@ object NotificationIconService {
             "$dayName, $dayOfMonth $monthName ${cal.get(Calendar.YEAR)}"
         }
 
-        // #2: Use config.timeFormat + showSeconds
-        val timePattern = if (config.showSeconds) {
-            config.timeFormat.replace("mm", "mm:ss")
-        } else {
-            config.timeFormat
-        }
+        // #2: Use config.timeFormat
         val time = try {
-            SimpleDateFormat(timePattern, Locale.getDefault()).format(now)
+            SimpleDateFormat(config.timeFormat, Locale.getDefault()).format(now)
         } catch (_: Exception) {
             SimpleDateFormat("HH:mm", Locale.getDefault()).format(now)
         }
@@ -216,10 +211,8 @@ object NotificationIconService {
 
         return ClockData(
             format = extract("format") ?: "EEE dd MMM",
-            timeFormat = extract("timeFormat") ?: "HH:mm",
-            showSeconds = extract("showSeconds") == "true",
-            showDate = extract("showDate") != "false",
-            showDay = extract("showDay") != "false",
+            timeFormat = extract("timeFormat") ?: "HH:mm",                showDate = extract("showDate") != "false",
+                showDay = extract("showDay") != "false",
             fontSize = (extract("fontSize")?.toDoubleOrNull() ?: 32.0),
             color = extract("color") ?: "#FFFFFF",
             alignment = extract("alignment") ?: "center",
@@ -252,7 +245,6 @@ object NotificationIconService {
     data class ClockData(
         val format: String = "EEE dd MMM",
         val timeFormat: String = "HH:mm",
-        val showSeconds: Boolean = false,
         val showDate: Boolean = true,
         val showDay: Boolean = true,
         val fontSize: Double = 32.0,

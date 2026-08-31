@@ -331,14 +331,9 @@ class FloatingBarService : Service() {
             }
         } else ""
 
-        // Time — use config.timeFormat + showSeconds
-        val timePattern = if (config.showSeconds) {
-            config.timeFormat.replace("mm", "mm:ss")
-        } else {
-            config.timeFormat
-        }
+        // Time — use config.timeFormat
         val time = try {
-            java.text.SimpleDateFormat(timePattern, Locale.getDefault()).format(now)
+            java.text.SimpleDateFormat(config.timeFormat, Locale.getDefault()).format(now)
         } catch (_: Exception) {
             // Fallback: manual build
             val h24 = cal.get(Calendar.HOUR_OF_DAY)
@@ -346,11 +341,9 @@ class FloatingBarService : Service() {
             val mm = pad(cal.get(Calendar.MINUTE))
             if (config.timeFormat.contains("hh")) {
                 val period = if (h24 >= 12) "PM" else "AM"
-                if (config.showSeconds) "${pad(h12)}:$mm:${pad(cal.get(Calendar.SECOND))} $period"
-                else "${pad(h12)}:$mm $period"
+                "${pad(h12)}:$mm $period"
             } else {
-                if (config.showSeconds) "${pad(h24)}:$mm:${pad(cal.get(Calendar.SECOND))}"
-                else "${pad(h24)}:$mm"
+                "${pad(h24)}:$mm"
             }
         }
 
@@ -395,10 +388,8 @@ class FloatingBarService : Service() {
 
         return ClockData(
             format = extract("format") ?: "EEE dd MMM",
-            timeFormat = extract("timeFormat") ?: "HH:mm",
-            showSeconds = extract("showSeconds") == "true",
-            showDate = extract("showDate") != "false",
-            showDay = extract("showDay") != "false",
+            timeFormat = extract("timeFormat") ?: "HH:mm",                showDate = extract("showDate") != "false",
+                showDay = extract("showDay") != "false",
             fontSize = (extract("fontSize")?.toDoubleOrNull() ?: 32.0),
             color = extract("color") ?: "#FFFFFF",
             alignment = extract("alignment") ?: "center",
@@ -459,11 +450,10 @@ class FloatingBarService : Service() {
     data class ClockData(
         val format: String = "EEE dd MMM",
         val timeFormat: String = "HH:mm",
-        val showSeconds: Boolean = false,
         val showDate: Boolean = true,
         val showDay: Boolean = true,
         val fontSize: Double = 32.0,
         val color: String = "#FFFFFF",
-        val alignment: String = "center",  // #4: alignment field added
+        val alignment: String = "center",
     )
 }

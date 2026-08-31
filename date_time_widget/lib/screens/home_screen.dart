@@ -5,6 +5,7 @@ import '../services/ads_service.dart';
 import '../services/iap_service.dart';
 import '../services/floating_bar_bridge.dart';
 import '../services/notification_service.dart';
+import '../services/reward_service.dart';
 import '../services/storage_service.dart';
 import '../services/widget_bridge.dart';
 import '../widgets/ad_banner.dart';
@@ -23,12 +24,14 @@ class HomeScreen extends StatefulWidget {
   final StorageService storage;
   final AdsService adsService;
   final IapService iapService;
+  final RewardService rewardService;
 
   const HomeScreen({
     super.key,
     required this.storage,
     required this.adsService,
     required this.iapService,
+    required this.rewardService,
   });
 
   @override
@@ -60,6 +63,7 @@ class HomeScreenState extends State<HomeScreen> {
       ),
     );
     if (updated != null && mounted) {
+      await widget.storage.saveConfig(updated);
       setState(() => _config = updated);
       final configJson = updated.toJsonString();
       WidgetBridge.updateWidgets(configJson: configJson);
@@ -75,10 +79,12 @@ class HomeScreenState extends State<HomeScreen> {
           currentConfig: _config,
           adsService: widget.adsService,
           storage: widget.storage,
+          rewardService: widget.rewardService,
         ),
       ),
     );
     if (updated != null && mounted) {
+      await widget.storage.saveConfig(updated);
       setState(() => _config = updated);
       final configJson = updated.toJsonString();
       WidgetBridge.updateWidgets(configJson: configJson);

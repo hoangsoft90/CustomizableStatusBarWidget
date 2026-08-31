@@ -25,7 +25,6 @@ void main() {
       const original = ClockConfig(
         format: 'dd/MM/yyyy',
         timeFormat: 'hh:mm a',
-        showSeconds: true,
         showDate: true,
         showDay: false,
         fontSize: 24,
@@ -33,7 +32,6 @@ void main() {
         alignment: 'left',
         notificationEnabled: true,
         floatingBarEnabled: false,
-        unlockedPresets: ['basic1', 'basic2', 'premium1'],
         isPremium: false,
       );
 
@@ -44,13 +42,11 @@ void main() {
       expect(loaded, equals(original));
       expect(loaded.format, 'dd/MM/yyyy');
       expect(loaded.timeFormat, 'hh:mm a');
-      expect(loaded.showSeconds, true);
       expect(loaded.showDay, false);
       expect(loaded.fontSize, 24);
       expect(loaded.color, '#FF5722');
       expect(loaded.alignment, 'left');
       expect(loaded.notificationEnabled, true);
-      expect(loaded.unlockedPresets, ['basic1', 'basic2', 'premium1']);
     });
 
     test('overwriting config persists the latest version', () async {
@@ -77,8 +73,7 @@ void main() {
     test('fromJsonString roundtrip preserves all fields', () {
       const config = ClockConfig(
         format: 'EEEE, MMMM d',
-        timeFormat: 'HH:mm:ss',
-        showSeconds: true,
+        timeFormat: 'HH:mm',
         showDate: true,
         showDay: true,
         fontSize: 36,
@@ -86,7 +81,6 @@ void main() {
         alignment: 'right',
         notificationEnabled: true,
         floatingBarEnabled: true,
-        unlockedPresets: ['basic1', 'basic2', 'premium1', 'premium2'],
         isPremium: true,
       );
 

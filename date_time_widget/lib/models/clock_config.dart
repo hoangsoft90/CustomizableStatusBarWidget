@@ -8,9 +8,6 @@ class ClockConfig {
   /// Time format, e.g. "HH:mm" (24h) or "hh:mm a" (12h)
   final String timeFormat;
 
-  /// Whether to show seconds in the clock
-  final bool showSeconds;
-
   /// Whether to show the date
   final bool showDate;
 
@@ -32,16 +29,12 @@ class ClockConfig {
   /// Whether floating bar is enabled (P1)
   final bool floatingBarEnabled;
 
-  /// List of unlocked preset IDs
-  final List<String> unlockedPresets;
-
   /// Whether the user has purchased the premium IAP
   final bool isPremium;
 
   const ClockConfig({
     this.format = 'EEE dd MMM',
     this.timeFormat = 'HH:mm',
-    this.showSeconds = false,
     this.showDate = true,
     this.showDay = true,
     this.fontSize = 32,
@@ -49,19 +42,28 @@ class ClockConfig {
     this.alignment = 'center',
     this.notificationEnabled = false,
     this.floatingBarEnabled = false,
-    this.unlockedPresets = const ['basic1', 'basic2'],
     this.isPremium = false,
   });
 
   /// Default config used on first launch.
   factory ClockConfig.defaults() => const ClockConfig();
 
+  /// Normalize legacy timeFormat that may contain ":ss" or "ss" tokens.
+  /// e.g. "HH:mm:ss" → "HH:mm", "hh:mm:ss a" → "hh:mm a"
+  static String normalizeTimeFormat(String format) {
+    return format
+        .replaceAll(RegExp(r':?ss'), '') // HH:mm:ss → HH:mm ; hh:mm:ss a → hh:mm a
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim();
+  }
+
   /// Create from a JSON map.
   factory ClockConfig.fromJson(Map<String, dynamic> json) {
     return ClockConfig(
       format: json['format'] as String? ?? 'EEE dd MMM',
-      timeFormat: json['timeFormat'] as String? ?? 'HH:mm',
-      showSeconds: json['showSeconds'] as bool? ?? false,
+      timeFormat: normalizeTimeFormat(
+        json['timeFormat'] as String? ?? 'HH:mm',
+      ),
       showDate: json['showDate'] as bool? ?? true,
       showDay: json['showDay'] as bool? ?? true,
       fontSize: (json['fontSize'] as num?)?.toDouble() ?? 32,
@@ -69,10 +71,6 @@ class ClockConfig {
       alignment: json['alignment'] as String? ?? 'center',
       notificationEnabled: json['notificationEnabled'] as bool? ?? false,
       floatingBarEnabled: json['floatingBarEnabled'] as bool? ?? false,
-      unlockedPresets: (json['unlockedPresets'] as List<dynamic>?)
-              ?.map((e) => e as String)
-              .toList() ??
-          const ['basic1', 'basic2'],
       isPremium: json['isPremium'] as bool? ?? false,
     );
   }
@@ -87,7 +85,6 @@ class ClockConfig {
     return {
       'format': format,
       'timeFormat': timeFormat,
-      'showSeconds': showSeconds,
       'showDate': showDate,
       'showDay': showDay,
       'fontSize': fontSize,
@@ -95,7 +92,6 @@ class ClockConfig {
       'alignment': alignment,
       'notificationEnabled': notificationEnabled,
       'floatingBarEnabled': floatingBarEnabled,
-      'unlockedPresets': List<String>.from(unlockedPresets),
       'isPremium': isPremium,
     };
   }
@@ -107,7 +103,6 @@ class ClockConfig {
   ClockConfig copyWith({
     String? format,
     String? timeFormat,
-    bool? showSeconds,
     bool? showDate,
     bool? showDay,
     double? fontSize,
@@ -115,13 +110,11 @@ class ClockConfig {
     String? alignment,
     bool? notificationEnabled,
     bool? floatingBarEnabled,
-    List<String>? unlockedPresets,
     bool? isPremium,
   }) {
     return ClockConfig(
       format: format ?? this.format,
       timeFormat: timeFormat ?? this.timeFormat,
-      showSeconds: showSeconds ?? this.showSeconds,
       showDate: showDate ?? this.showDate,
       showDay: showDay ?? this.showDay,
       fontSize: fontSize ?? this.fontSize,
@@ -129,7 +122,6 @@ class ClockConfig {
       alignment: alignment ?? this.alignment,
       notificationEnabled: notificationEnabled ?? this.notificationEnabled,
       floatingBarEnabled: floatingBarEnabled ?? this.floatingBarEnabled,
-      unlockedPresets: unlockedPresets ?? this.unlockedPresets,
       isPremium: isPremium ?? this.isPremium,
     );
   }
@@ -141,7 +133,6 @@ class ClockConfig {
           runtimeType == other.runtimeType &&
           format == other.format &&
           timeFormat == other.timeFormat &&
-          showSeconds == other.showSeconds &&
           showDate == other.showDate &&
           showDay == other.showDay &&
           fontSize == other.fontSize &&
@@ -149,14 +140,12 @@ class ClockConfig {
           alignment == other.alignment &&
           notificationEnabled == other.notificationEnabled &&
           floatingBarEnabled == other.floatingBarEnabled &&
-          _listEquals(unlockedPresets, other.unlockedPresets) &&
           isPremium == other.isPremium;
 
   @override
   int get hashCode => Object.hash(
         format,
         timeFormat,
-        showSeconds,
         showDate,
         showDay,
         fontSize,
@@ -164,17 +153,8 @@ class ClockConfig {
         alignment,
         notificationEnabled,
         floatingBarEnabled,
-        Object.hashAll(unlockedPresets),
         isPremium,
       );
-
-  static bool _listEquals(List<String> a, List<String> b) {
-    if (a.length != b.length) return false;
-    for (var i = 0; i < a.length; i++) {
-      if (a[i] != b[i]) return false;
-    }
-    return true;
-  }
 
   @override
   String toString() => 'ClockConfig(${toJson()})';

@@ -142,7 +142,6 @@ class DateTimeWidgetProvider : AppWidgetProvider() {
             return ClockData(
                 format = extract("format") ?: "EEE dd MMM",
                 timeFormat = extract("timeFormat") ?: "HH:mm",
-                showSeconds = extract("showSeconds") == "true",
                 showDate = extract("showDate") != "false",
                 showDay = extract("showDay") != "false",
                 fontSize = (extract("fontSize")?.toDoubleOrNull() ?: 32.0),
@@ -168,13 +167,8 @@ class DateTimeWidgetProvider : AppWidgetProvider() {
         private fun formatDisplay(cal: Calendar, config: ClockData): DisplayData {
             val date = cal.time
 
-            val timePattern = if (config.showSeconds) {
-                config.timeFormat.replace("mm", "mm:ss")
-            } else {
-                config.timeFormat
-            }
             val time = try {
-                SimpleDateFormat(timePattern, Locale.getDefault()).format(date)
+                SimpleDateFormat(config.timeFormat, Locale.getDefault()).format(date)
             } catch (_: Exception) {
                 SimpleDateFormat("HH:mm", Locale.getDefault()).format(date)
             }
@@ -231,7 +225,6 @@ class DateTimeWidgetProvider : AppWidgetProvider() {
     data class ClockData(
         val format: String = "EEE dd MMM",
         val timeFormat: String = "HH:mm",
-        val showSeconds: Boolean = false,
         val showDate: Boolean = true,
         val showDay: Boolean = true,
         val fontSize: Double = 32.0,

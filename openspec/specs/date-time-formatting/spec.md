@@ -8,37 +8,27 @@ Custom date, time, and day-of-week formatting using Dart built-in `DateTime` —
 
 ### R1: formatTime handles 12h and 24h
 
-Replaces `HH` (24h hour), `hh` (12h hour), `mm` (minute), `ss` (second), `a` (AM/PM) in the `timeFormat` string.
+Replaces `HH` (24h hour), `hh` (12h hour), `mm` (minute), `a` (AM/PM) in the `timeFormat` string. Only two format patterns are supported: `'HH:mm'` (24h) and `'hh:mm a'` (12h).
+
+Note: Seconds (`ss`) support was removed in plan3_final.md Task A — it caused a double-seconds bug on Android native (`HH:mm:ss` → `HH:mm:ss:ss`).
 
 **Scenario: 24h format**
 - Given `config.timeFormat = 'HH:mm'` and `now = DateTime(2026, 8, 30, 14, 5)`
 - When `DateFormatter.formatTime(now, config)` is called
 - Then the result is `'14:05'`
-- Reference: `lib/utils/date_formatter.dart:12-30`
+- Reference: `lib/utils/date_formatter.dart:12-24`
 
 **Scenario: 12h format with AM**
 - Given `config.timeFormat = 'hh:mm a'` and `now = DateTime(2026, 8, 30, 8, 30)`
 - When `DateFormatter.formatTime(now, config)` is called
 - Then the result is `'08:30 AM'`
-- Reference: `lib/utils/date_formatter.dart:12-30`
+- Reference: `lib/utils/date_formatter.dart:12-24`
 
 **Scenario: 12h format midnight**
 - Given `config.timeFormat = 'hh:mm a'` and `now = DateTime(2026, 8, 30, 0, 0)`
 - When `formatTime` is called
 - Then the result is `'12:00 AM'` (hour 0 maps to 12)
 - Reference: `lib/utils/date_formatter.dart:16`
-
-**Scenario: showSeconds appends :ss**
-- Given `config.timeFormat = 'HH:mm'`, `config.showSeconds = true`, and `now` with second=45
-- When `formatTime` is called
-- Then the result contains `':45'`
-- Reference: `lib/utils/date_formatter.dart:22-24`
-
-**Scenario: showSeconds=false strips :ss**
-- Given `config.timeFormat = 'HH:mm:ss'` and `config.showSeconds = false`
-- When `formatTime` is called
-- Then `:ss` is removed from the output
-- Reference: `lib/utils/date_formatter.dart:22-24`
 
 ### R2: formatDate uses pattern matching
 

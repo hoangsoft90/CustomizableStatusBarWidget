@@ -5,23 +5,22 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import '../models/clock_config.dart';
 import '../utils/constants.dart';
+import 'reward_service.dart';
 import 'storage_service.dart';
 
 /// Manages AdMob ads: Adaptive Banner + Rewarded Video.
 ///
 /// - Banner is shown on Home and Settings screens (never on Editor — plan §3).
-/// - Rewarded Video is used to unlock premium presets on demand.
+/// - Rewarded Video is used to unlock premium presets for today's use.
 /// - All ads are skipped when `ClockConfig.isPremium == true`.
 ///
 /// Uses **test ad unit IDs** during development.  NEVER use live IDs
 /// for testing — risk of Google Play account suspension.
 class AdsService {
   final StorageService _storage;
+  final RewardService _reward;
 
-  AdsService(this._storage);
-
-  // Ad unit IDs are managed in AppConstants (constants.dart)
-  // Set AppConstants.testAds = false and replace prod IDs before release
+  AdsService(this._storage, this._reward);
 
   bool get _isPremium => _storage.loadConfig().isPremium;
 
@@ -60,6 +59,8 @@ class AdsService {
   /// Pre-load a rewarded ad so it's ready when the user taps "Watch".
   Future<void> preloadRewarded() async {
     if (_isPremium) return;
+    // Don't preload if no remaining unlocks
+    if (_reward.remainingUnlocksToday() <= 0) return;
     await RewardedAd.load(
       adUnitId: AppConstants.rewardedAdUnitId,
       request: const AdRequest(),
@@ -143,22 +144,40 @@ class AdsService {
 
   // ── Unlock preset ─────────────────────────────────────────
 
-  /// Attempt to unlock [presetId] via rewarded ad.
+  /// Attempt to unlock [presetId] via rewarded ad for today.
   ///
   /// Flow:
-  /// 1. Show "Watch a short ad to unlock" dialog
+  /// 1. Show "Watch a short ad to use this preset today" dialog
   /// 2. User taps "Watch" → showRewardedAd()
-  /// 3. If earned → add presetId to unlockedPresets, save config
+  /// 3. If earned → rewardService.unlockToday(presetId)
   /// 4. If not earned (dismissed / failed) → nothing changes
   ///
-  /// Returns `true` if the preset was unlocked.
+  /// Returns `true` if the preset was unlocked for today.
   Future<bool> unlockPreset(
     BuildContext context,
     String presetId,
-    ClockConfig currentConfig,
-  ) async {
+    ClockConfig currentConfig, {
+    required bool isFreePreset,
+  }) async {
     if (currentConfig.isPremium) return true;
-    if (currentConfig.unlockedPresets.contains(presetId)) return true;
+    if (isFreePreset) return true;
+    if (_reward.canUsePreset(presetId,
+        isPremium: currentConfig.isPremium, isFreePreset: isFreePreset)) {
+      // Already unlocked today
+      return true;
+    }
+
+    final remaining = _reward.remainingUnlocksToday();
+    if (remaining <= 0) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No more unlocks today. Try again tomorrow.'),
+          ),
+        );
+      }
+      return false;
+    }
 
     // Step 1: Confirmation dialog
     final watch = await showDialog<bool>(
@@ -166,8 +185,9 @@ class AdsService {
       builder: (ctx) => AlertDialog(
         icon: const Icon(Icons.lock_open, size: 36),
         title: const Text('Unlock Preset'),
-        content: const Text(
-          'Watch a short ad to unlock this preset forever?',
+        content: Text(
+          'Watch a short ad to use this preset today?\n'
+          '$remaining unlock${remaining == 1 ? '' : 's'} remaining today.',
         ),
         actions: [
           TextButton(
@@ -188,13 +208,9 @@ class AdsService {
     // Step 2: Show ad
     final earned = await showRewardedAd();
 
-    // Step 3: Only unlock if reward was truly earned
+    // Step 3: Record unlock in RewardService (reads fresh state from storage)
     if (earned) {
-      final updated = currentConfig.copyWith(
-        unlockedPresets: [...currentConfig.unlockedPresets, presetId],
-      );
-      await _storage.saveConfig(updated);
-      return true;
+      return await _reward.unlockToday(presetId);
     }
 
     // Ad not available or dismissed — give user feedback

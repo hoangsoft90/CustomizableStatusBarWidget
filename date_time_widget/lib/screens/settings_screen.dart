@@ -31,6 +31,7 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  static const bool kShowPremiumUi = false;
   late ClockConfig _config;
 
   @override
@@ -122,70 +123,71 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
-                // ── Premium section ──
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              isPremium
-                                  ? Icons.workspace_premium
-                                  : Icons.remove_circle_outline,
-                              color: isPremium ? Colors.amber : null,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Text(
+                // ── Premium section (hidden until IAP is live) ──
+                if (kShowPremiumUi)
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
                                 isPremium
-                                    ? 'Premium Active'
-                                    : 'Remove Ads & Unlock All',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .titleMedium
-                                    ?.copyWith(fontWeight: FontWeight.w600),
+                                    ? Icons.workspace_premium
+                                    : Icons.remove_circle_outline,
+                                color: isPremium ? Colors.amber : null,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  isPremium
+                                      ? 'Premium Active'
+                                      : 'Remove Ads & Unlock All',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium
+                                      ?.copyWith(fontWeight: FontWeight.w600),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          if (isPremium)
+                            Text(
+                              'Thank you! All ads are removed and every preset '
+                              'is unlocked.',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            )
+                          else ...[
+                            Text(
+                              '• Remove all banners\n'
+                              '• No more "watch ad" prompts\n'
+                              '• Unlock every preset instantly',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              width: double.infinity,
+                              child: FilledButton(
+                                onPressed: _onBuyPremium,
+                                child: Text(_buyButtonText(product)),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            SizedBox(
+                              width: double.infinity,
+                              child: TextButton(
+                                onPressed: _onRestore,
+                                child: const Text('Restore Purchase'),
                               ),
                             ),
                           ],
-                        ),
-                        const SizedBox(height: 12),
-                        if (isPremium)
-                          Text(
-                            'Thank you! All ads are removed and every preset '
-                            'is unlocked.',
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          )
-                        else ...[
-                          Text(
-                            '• Remove all banners\n'
-                            '• No more "watch ad" prompts\n'
-                            '• Unlock every preset instantly',
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-                          const SizedBox(height: 16),
-                          SizedBox(
-                            width: double.infinity,
-                            child: FilledButton(
-                              onPressed: _onBuyPremium,
-                              child: Text(_buyButtonText(product)),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          SizedBox(
-                            width: double.infinity,
-                            child: TextButton(
-                              onPressed: _onRestore,
-                              child: const Text('Restore Purchase'),
-                            ),
-                          ),
                         ],
-                      ],
+                      ),
                     ),
                   ),
-                ),
                 const SizedBox(height: 24),
 
                 // ── About ──
