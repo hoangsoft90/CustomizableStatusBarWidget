@@ -114,6 +114,12 @@ class _EditorScreenState extends State<EditorScreen> {
     return Colors.white;
   }
 
+  Color get _parsedBackgroundColor {
+    final hex = (_background.solidColor ?? '#1A1A2E').replaceFirst('#', '');
+    if (hex.length == 6) return Color(int.parse('FF$hex', radix: 16));
+    return const Color(0xFF1A1A2E);
+  }
+
   String _colorToHex(Color c) =>
       '#${c.toARGB32().toRadixString(16).substring(2).toUpperCase()}';
 
@@ -420,7 +426,7 @@ class _EditorScreenState extends State<EditorScreen> {
                   _SectionLabel('Color'),
                   const SizedBox(height: 8),
                   _ColorPicker(
-                    selected: _parsedColor,
+                    selected: _parsedBackgroundColor,
                     onChanged: (c) => _updateBackground(
                         (b) => b.copyWith(solidColor: _colorToHex(c))),
                   ),

@@ -307,7 +307,7 @@ class HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 8),
 
                   // Live preview
-                  ClockPreview(config: _config),
+                  ClockPreview(config: _config, background: _background),
                   const SizedBox(height: 24),
 
                   // Tagline

@@ -5,8 +5,8 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.graphics.BitmapFactory
 import android.widget.RemoteViews
+import androidx.core.content.FileProvider
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -51,18 +51,25 @@ class DateTimeWidgetProvider : AppWidgetProvider() {
             FloatingBarService.updateOverlay(context)
         }
 
-        /** Save the baked bitmap path for a specific widget instance. */
+        private const val BG_PREFS = "widget_background"
+        private const val BG_PATH_KEY = "bg_bitmap_path"
+
+        /** Save the baked bitmap path (shared across all widget instances). */
         fun saveWidgetBackground(context: Context, widgetId: Int, bitmapPath: String?) {
-            val prefs = context.getSharedPreferences(CONFIG_PREFS, Context.MODE_PRIVATE)
-            val key = "widget_bg_$widgetId"
+            val prefs = context.getSharedPreferences(BG_PREFS, Context.MODE_PRIVATE)
             if (bitmapPath != null) {
-                prefs.edit().putString(key, bitmapPath).apply()
+                prefs.edit().putString(BG_PATH_KEY, bitmapPath).apply()
             } else {
-                prefs.edit().remove(key).apply()
+                prefs.edit().remove(BG_PATH_KEY).apply()
             }
             // Re-render this specific widget
             val mgr = AppWidgetManager.getInstance(context)
             renderWidget(context, mgr, widgetId)
+        }
+
+        private fun readBackgroundPath(context: Context): String? {
+            return context.getSharedPreferences(BG_PREFS, Context.MODE_PRIVATE)
+                .getString(BG_PATH_KEY, null)
         }
 
         private fun renderWidget(
@@ -188,17 +195,20 @@ class DateTimeWidgetProvider : AppWidgetProvider() {
             views: RemoteViews,
             widgetId: Int,
         ) {
-            val prefs = context.getSharedPreferences(CONFIG_PREFS, Context.MODE_PRIVATE)
-            val bitmapPath = prefs.getString("widget_bg_$widgetId", null)
+            val bgPath = readBackgroundPath(context)
 
-            if (bitmapPath != null && File(bitmapPath).exists()) {
+            if (bgPath != null && File(bgPath).exists()) {
                 try {
-                    val bitmap = BitmapFactory.decodeFile(bitmapPath)
-                    if (bitmap != null) {
-                        views.setImageViewBitmap(R.id.widget_background, bitmap)
-                        views.setViewVisibility(R.id.widget_background, android.view.View.VISIBLE)
-                        return
-                    }
+                    val uri = FileProvider.getUriForFile(
+                        context, "${context.packageName}.fileprovider", File(bgPath)
+                    )
+                    context.grantUriPermission(
+                        "com.android.systemui", uri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    )
+                    views.setImageViewUri(R.id.widget_background, uri)
+                    views.setViewVisibility(R.id.widget_background, android.view.View.VISIBLE)
+                    return
                 } catch (_: Exception) {
                     // Fall through to default background
                 }
@@ -272,8 +282,8 @@ class DateTimeWidgetProvider : AppWidgetProvider() {
     ) {
         // User resized widget — clear cached bitmap so Flutter can re-bake
         // for the new size on next update
-        val prefs = context.getSharedPreferences(CONFIG_PREFS, Context.MODE_PRIVATE)
-        prefs.edit().remove("widget_bg_$widgetId").apply()
+        val prefs = context.getSharedPreferences(BG_PREFS, Context.MODE_PRIVATE)
+        prefs.edit().remove(BG_PATH_KEY).apply()
 
         // Re-render with current config (no bitmap until Flutter re-bakes)
         renderWidget(context, appWidgetManager, widgetId)

@@ -17,7 +17,8 @@
         android:layout_height="match_parent"
         android:orientation="vertical"
         android:gravity="center"
-        android:padding="6dp">
+        android:padding="6dp"
+        android:background="#59000000">
 
         <TextView
             android:id="@+id/widget_day"
