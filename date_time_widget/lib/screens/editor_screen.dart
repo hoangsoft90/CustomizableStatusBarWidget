@@ -83,6 +83,7 @@ class _EditorScreenState extends State<EditorScreen> {
   late ClockConfig _config;
   late BackgroundConfig _background;
   final ImagePicker _picker = ImagePicker();
+  bool _isProcessingImage = false;
 
   @override
   void initState() {
@@ -227,8 +228,19 @@ class _EditorScreenState extends State<EditorScreen> {
       if (!await bgDir.exists()) {
         await bgDir.create(recursive: true);
       }
-      final bgFile = File('${bgDir.path}/current_bg.png');
+      final bgFile = File('${bgDir.path}/bg_${DateTime.now().millisecondsSinceEpoch}.png');
       await bgFile.writeAsBytes(bitmapBytes);
+
+      // Cleanup old bitmap files (best-effort)
+      try {
+        final oldFiles = bgDir
+            .listSync()
+            .whereType<File>()
+            .where((f) => f.path.endsWith('.png') && f.path != bgFile.path);
+        for (final f in oldFiles) {
+          await f.delete();
+        }
+      } catch (_) {}
 
       // Push to each widget instance
       for (final widgetId in widgetIds) {
@@ -252,47 +264,58 @@ class _EditorScreenState extends State<EditorScreen> {
     );
     if (picked == null) return;
 
-    // Read image bytes
-    final bytes = await File(picked.path).readAsBytes();
+    setState(() => _isProcessingImage = true);
+    try {
+      // Read image bytes
+      final bytes = await File(picked.path).readAsBytes();
 
-    // Copy and resize source to max 1600px
-    final appDir = await getApplicationDocumentsDirectory();
-    final designsDir = Directory('${appDir.path}/designs');
-    if (!await designsDir.exists()) {
-      await designsDir.create(recursive: true);
-    }
-    final designId = const Uuid().v4();
-    final sourcePath = '${designsDir.path}/$designId.jpg';
-    await ImageUtils.copyAndResizeSource(
-      imageBytes: bytes,
-      destinationPath: sourcePath,
-    );
-
-    // Open crop screen
-    if (!mounted) return;
-    final cropResult = await Navigator.of(context).push<CropResult>(
-      MaterialPageRoute(
-        builder: (_) => CropScreen(imageFile: File(sourcePath)),
-      ),
-    );
-
-    if (cropResult == null) return;
-
-    // Apply smart defaults for new image background
-    setState(() {
-      _background = BackgroundConfig(
-        type: BackgroundType.image,
-        imagePath: sourcePath,
-        cropScale: cropResult.scale,
-        cropOffsetX: cropResult.offsetX,
-        cropOffsetY: cropResult.offsetY,
-        blurSigma: 0.0, // Off by default per plan5 §4
-        overlayOpacity: 0.35, // Dark overlay 35% per plan5 §4
-        overlayMode: OverlayMode.dark,
-        autoTextContrast: true,
-        textShadow: true,
+      // Copy and resize source to max 1600px
+      final appDir = await getApplicationDocumentsDirectory();
+      final designsDir = Directory('${appDir.path}/designs');
+      if (!await designsDir.exists()) {
+        await designsDir.create(recursive: true);
+      }
+      final designId = const Uuid().v4();
+      final sourcePath = '${designsDir.path}/$designId.jpg';
+      await ImageUtils.copyAndResizeSource(
+        imageBytes: bytes,
+        destinationPath: sourcePath,
       );
-    });
+
+      // Open crop screen
+      if (!mounted) return;
+      final cropResult = await Navigator.of(context).push<CropResult>(
+        MaterialPageRoute(
+          builder: (_) => CropScreen(imageFile: File(sourcePath)),
+        ),
+      );
+
+      if (cropResult == null) return;
+
+      // Apply smart defaults for new image background
+      setState(() {
+        _background = BackgroundConfig(
+          type: BackgroundType.image,
+          imagePath: sourcePath,
+          cropScale: cropResult.scale,
+          cropOffsetX: cropResult.offsetX,
+          cropOffsetY: cropResult.offsetY,
+          blurSigma: 0.0, // Off by default per plan5 §4
+          overlayOpacity: 0.35, // Dark overlay 35% per plan5 §4
+          overlayMode: OverlayMode.dark,
+          autoTextContrast: true,
+          textShadow: true,
+        );
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not process image. Please try another one.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isProcessingImage = false);
+    }
   }
 
   void _removeImage() {
@@ -328,20 +351,44 @@ class _EditorScreenState extends State<EditorScreen> {
                 const SizedBox(height: 20),
 
                 // ── Background Section ──
-                _SectionTitle('Background'),
-                const SizedBox(height: 8),
-                _BackgroundTypeSelector(
-                  selected: _background.type,
-                  onChanged: (type) {
-                    if (type == BackgroundType.image) {
-                      _pickImage();
-                    } else {
-                      _updateBackground((b) => b.copyWith(type: type));
-                    }
-                  },
-                  onRemoveImage: _background.type == BackgroundType.image
-                      ? _removeImage
-                      : null,
+                Stack(
+                  children: [
+                    _SectionTitle('Background'),
+                    const SizedBox(height: 8),
+                    _BackgroundTypeSelector(
+                      selected: _background.type,
+                      isProcessing: _isProcessingImage,
+                      onChanged: (type) {
+                        if (type == BackgroundType.image) {
+                          _pickImage();
+                        } else {
+                          _updateBackground((b) => b.copyWith(type: type));
+                        }
+                      },
+                      onRemoveImage: _background.type == BackgroundType.image
+                          ? _removeImage
+                          : null,
+                    ),
+                    if (_isProcessingImage)
+                      Positioned.fill(
+                        child: Container(
+                          color: Colors.black45,
+                          child: const Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                CircularProgressIndicator(color: Colors.white),
+                                SizedBox(height: 8),
+                                Text(
+                                  'Preparing image…',
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
 
                 // ── Image-specific controls ──
@@ -834,11 +881,13 @@ class _BackgroundTypeSelector extends StatelessWidget {
   final BackgroundType selected;
   final ValueChanged<BackgroundType> onChanged;
   final VoidCallback? onRemoveImage;
+  final bool isProcessing;
 
   const _BackgroundTypeSelector({
     required this.selected,
     required this.onChanged,
     this.onRemoveImage,
+    this.isProcessing = false,
   });
 
   @override
@@ -869,7 +918,8 @@ class _BackgroundTypeSelector extends StatelessWidget {
           icon: Icons.photo_outlined,
           label: 'Image',
           selected: selected == BackgroundType.image,
-          onTap: () => onChanged(BackgroundType.image),
+          onTap: isProcessing ? null : () => onChanged(BackgroundType.image),
+          enabled: !isProcessing,
         ),
         if (onRemoveImage != null)
           GestureDetector(
@@ -907,19 +957,23 @@ class _BgTypeChip extends StatelessWidget {
   final IconData icon;
   final String label;
   final bool selected;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
+  final bool enabled;
 
   const _BgTypeChip({
     required this.icon,
     required this.label,
     required this.selected,
-    required this.onTap,
+    this.onTap,
+    this.enabled = true,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: enabled ? onTap : null,
+      child: Opacity(
+      opacity: enabled ? 1.0 : 0.4,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
@@ -955,6 +1009,7 @@ class _BgTypeChip extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

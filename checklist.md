@@ -1,0 +1,7 @@
+- Mọi hành động thao tác app phải mượt, nếu có process ngầm phải show loading indicator
+- chọn background image , có show loading để user chờ đợi.
+- Không giới hạn tính năng sử dụng, muốn sử dụng tính năng pro phải xem ads, và chỉ sử dụng được trong ngày. Ngày hôm sau phải muốn sử dụng pro tiếp phải xem ads.
+- App ko được giật lác ở mọi chức năng, mọi process nặng đều đưa vào background process, để UI mượt.
+- Mọi thao tác nếu lỗi / không cho phép phải thông báo qua toast.
+- widget phải hiển thị đúng như preview widget trên app
+- Code ở Flutter & đồng bộ hoàn thiện ở native integration

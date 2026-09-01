@@ -152,8 +152,19 @@ class HomeScreenState extends State<HomeScreen> {
       if (!await bgDir.exists()) {
         await bgDir.create(recursive: true);
       }
-      final bgFile = File('${bgDir.path}/current_bg.png');
+      final bgFile = File('${bgDir.path}/bg_${DateTime.now().millisecondsSinceEpoch}.png');
       await bgFile.writeAsBytes(bitmapBytes);
+
+      // Cleanup old bitmap files (best-effort)
+      try {
+        final oldFiles = bgDir
+            .listSync()
+            .whereType<File>()
+            .where((f) => f.path.endsWith('.png') && f.path != bgFile.path);
+        for (final f in oldFiles) {
+          await f.delete();
+        }
+      } catch (_) {}
 
       for (final id in widgetIds) {
         await WidgetBridge.setWidgetBackground(
