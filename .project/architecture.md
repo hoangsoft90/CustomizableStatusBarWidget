@@ -11,6 +11,7 @@
 │                   FLUTTER APP                     │
 │                                                   │
 │  EditorScreen → ClockConfig → StorageService      │
+│                   + BackgroundConfig               │
 │                    ↓                               │
 │            ClockConfig.toJsonString()              │
 │                    ↓                               │
@@ -29,7 +30,7 @@
 │  ┌─────────────────┬──────────────────┬─────────┐ │
 │  │DateTimeWidget   │NotificationIcon  │Floating │ │
 │  │Provider         │Service           │BarSvc   │ │
-│  │(AppWidget)      │(NotifManager)    │(Overlay)│ │
+│  │(AppWidget+BG)   │(NotifManager)    │(Overlay)│ │
 │  └─────────────────┴──────────────────┴─────────┘ │
 │                                                    │
 │  TimeTickService (ACTION_TIME_TICK → update all 3) │
@@ -43,7 +44,7 @@
 User saves in Editor
   → ClockConfig.toJsonString()
   → WidgetBridge.updateWidgets(configJson: json)
-  → NotificationService.update()  
+  → NotificationService.update()
   → FloatingBarBridge.update(configJson: json)
        ↓ MethodChannel.invokeMethod('saveConfig', json)
 Native: MainActivity receives JSON
@@ -51,6 +52,23 @@ Native: MainActivity receives JSON
   → DateTimeWidgetProvider.saveConfig() → updateAllWidgets()
   → NotificationIconService.saveConfig() → update()
   → FloatingBarService.saveConfig() → update()
+```
+
+## Background Bitmap Flow (plan5-8)
+
+```
+User picks image in Editor
+  → ImageUtils.copyAndResizeSource() (max 1600px)
+  → CropScreen for zoom+pan
+  → bakeBackgroundBitmap() (per-widget size, max 480px)
+  → Save to app documents/widget_bg/bg_{millis}.png
+  → WidgetBridge.setWidgetBackground(widgetId, bitmapPath)
+       ↓ MethodChannel
+Native: MainActivity receives path
+  → SharedPreferences("widget_background", key="bg_bitmap_path")
+  → DateTimeWidgetProvider.renderWidget() → applyWidgetBackground()
+  → BitmapFactory.decodeFile() + inSampleSize + 800px cap
+  → RemoteViews.setImageViewBitmap()
 ```
 
 ## ClockConfig Model (10 fields)
@@ -70,9 +88,22 @@ ClockConfig({
 })
 ```
 
-**Legacy fields removed (plan3_final.md):**
-- `showSeconds` — removed, `normalizeTimeFormat()` strips `:ss` from old JSON
-- `unlockedPresets` — replaced by `RewardState` in separate SharedPreferences key
+## BackgroundConfig Model
+
+```dart
+BackgroundConfig({
+  type: BackgroundType.none,  // none/solid/gradient/image
+  solidColor: '#000000',
+  gradientColors: [Color(0xFF000000), Color(0xFF434343)],
+  gradientAngle: 135,
+  imagePath: null,            // Path to cropped source image
+  overlayMode: OverlayMode.dark,
+  overlayOpacity: 0.35,
+  blurSigma: 0,
+  textShadow: true,
+  autoTextContrast: false,
+})
+```
 
 ## RewardState Model (separate persistence)
 
@@ -84,53 +115,69 @@ RewardState({
 })
 ```
 
-Stored in SharedPreferences key `"reward_state"`, separate from ClockConfig.
+## SharedPreferences Namespaces
+
+| Namespace | Key | Content |
+|-----------|-----|---------|
+| `FlutterSharedPreferences` | `clock_config` | ClockConfig JSON (Flutter) |
+| `FlutterSharedPreferences` | `reward_state` | RewardState JSON |
+| `FlutterSharedPreferences` | `notification_enabled` | bool |
+| `FlutterSharedPreferences` | `floatingBarEnabled` | bool |
+| `status_bar_config` | `clock_config` | ClockConfig JSON (Native, synced) |
+| `widget_background` | `bg_bitmap_path` | Bitmap file path (Native) |
+
+## MethodChannel
+
+| Channel | Direction | Methods |
+|---------|-----------|---------|
+| `io.photoclock.widget/widgets` | Flutter→Native | `updateWidgets(configJson)`, `setWidgetBackground(widgetId, path)`, `getActiveWidgetIds()` |
+| `io.photoclock.widget/notification` | Flutter→Native | `start()`, `stop()`, `update()`, `saveConfig(json)` |
+| `io.photoclock.widget/floating_bar` | Flutter→Native | `start()`, `stop()`, `update(configJson)` |
+| `io.photoclock.widget/deep_link` | Native→Flutter | `openEditor` |
 
 ## Native Services Detail
 
 ### DateTimeWidgetProvider (AppWidget)
 - 4 layouts: `widget_2x1`, `widget_3x1`, `widget_4x1`, `widget_4x2`
+- All use `FrameLayout` root with `ImageView#widget_background` + text shadow
 - Reads config from `"status_bar_config"` SharedPreferences
-- Uses `SimpleDateFormat` for locale-aware formatting
+- Reads bitmap path from `"widget_background"` SharedPreferences
+- `applyWidgetBackground()`: BitmapFactory.decodeFile + inSampleSize + 800px cap + setImageViewBitmap
+- `onAppWidgetOptionsChanged()`: re-renders WITHOUT clearing background
 - Updates via `TimeTickService` (ACTION_TIME_TICK) or MethodChannel
 
 ### NotificationIconService
 - Persistent notification with day number as monochrome bitmap icon
 - Full date/time in expanded notification body
-- Uses `IconCompat.createWithBitmap()` for custom icon
 - Creates notification channel `"date_time_icon"` (IMPORTANCE_LOW)
 
 ### FloatingBarService
 - Foreground service with `TYPE_APPLICATION_OVERLAY`
 - Positioned right below status bar (offset = statusBarHeight)
-- Transparent background, no input focus
 - In-place update via `UPDATE_OVERLAY` action (no stop/start cycle)
 
 ### TimeTickService
 - Dynamically registered `BroadcastReceiver` for `ACTION_TIME_TICK`
 - On tick: updates Widget + Notification + FloatingBar
-- Registered in `MainActivity.onResume()`, unregistered in `onPause()`
 
 ### BootReceiver
 - Listens `BOOT_COMPLETED`
 - Restarts NotificationIconService + FloatingBarService if enabled
 - Triggers widget update
 
-## SharedPreferences Keys
+## Design Storage (plan5)
 
-| Key | File | Content |
-|-----|------|---------|
-| `clock_config` | `FlutterSharedPreferences` | ClockConfig JSON (Flutter) |
-| `clock_config` | `status_bar_config` | ClockConfig JSON (Native, synced) |
-| `flutter.notification_enabled` | `FlutterSharedPreferences` | bool |
-| `flutter.floatingBarEnabled` | `FlutterSharedPreferences` | bool |
-| `reward_state` | `FlutterSharedPreferences` | RewardState JSON |
+### DesignStorageService
+- CRUD for `WidgetDesign` objects in SharedPreferences
+- Quota: max 3 designs (free), unlimited (premium)
+- Each design has: id, name, clock (ClockConfig), background (BackgroundConfig), createdAt
 
-## MethodChannel
+### My Designs Screen
+- List saved designs with thumbnail preview
+- Create new design → EditorScreen (storage=null)
+- Apply design → updates ClockConfig + BackgroundConfig + all surfaces
+- Rename/delete designs
 
-| Channel | Direction | Methods |
-|---------|-----------|---------|
-| `com.example.date_time_widget/widget` | Flutter→Native | `updateWidgets(configJson)` |
-| `com.example.date_time_widget/notification` | Flutter→Native | `start()`, `stop()`, `update()`, `saveConfig(json)` |
-| `com.example.date_time_widget/floating_bar` | Flutter→Native | `start()`, `stop()`, `update(configJson)` |
-| `com.example.date_time_widget/deep_link` | Native→Flutter | `openEditor` |
+### Share Service
+- Render clock preview to PNG (1080×540) with background
+- System share sheet via `share_plus`

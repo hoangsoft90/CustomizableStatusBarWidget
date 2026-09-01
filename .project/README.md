@@ -1,7 +1,7 @@
 # Date & Time Widget — Knowledge Items
 
 > Auto-generated knowledge base for the **CustomizableStatusBarWidget** project.
-> Last updated: 2026-08-30
+> Last updated: 2026-09-01
 
 ## Quick Navigation
 
@@ -18,13 +18,15 @@
 
 | | |
 |---|---|
-| **App name** | Date & Time Widget |
-| **Package ID** | `com.example.date_time_widget` |
+| **App name** | Photo Clock Widget (package: `io.photoclock.widget`) |
+| **Package ID** | `io.photoclock.widget` |
 | **Version** | 1.0.0+1 (chưa release) |
 | **Repo** | https://github.com/hoangsoft90/CustomizableStatusBarWidget |
 | **Build** | GitHub Actions (Flutter latest stable + Java 17) |
 | **Target** | Android (SDK 36, minSdk from Flutter) |
 | **Contact** | haibasoftware@gmail.com |
+| **Sentry DSN** | Configured in `main.dart` |
+| **Privacy Policy** | https://all-my-apps-5d52f.web.app/privacy.html |
 
 ## Architecture at a Glance
 
@@ -32,10 +34,12 @@
 ┌─────────────────────────────────────────────────┐
 │                   FLUTTER                        │
 │  ClockConfig ←→ StorageService (SharedPreferences)│
+│  BackgroundConfig (per-design)                   │
+│  DesignStorageService (My Designs CRUD)          │
 │       ↕ MethodChannel (JSON)                     │
 ├─────────────────────────────────────────────────┤
 │               NATIVE ANDROID (Kotlin)            │
-│  DateTimeWidgetProvider (AppWidget)              │
+│  DateTimeWidgetProvider (AppWidget + Bitmap BG)  │
 │  NotificationIconService (Persistent Notif)      │
 │  FloatingBarService (Overlay ForegroundService)  │
 │  TimeTickService (ACTION_TIME_TICK receiver)     │
@@ -48,20 +52,23 @@
 ```
 date_time_widget/
 ├── lib/
-│   ├── main.dart                    # App entry, DI
+│   ├── main.dart                    # App entry, DI, Sentry init
 │   ├── models/
 │   │   ├── clock_config.dart        # Core config (10 fields)
 │   │   ├── preset.dart              # Preset model
 │   │   ├── presets.dart             # 8 built-in presets
 │   │   ├── reward_state.dart        # Daily reward tracking
-│   │   └── widget_config.dart       # Widget size mapping
+│   │   ├── widget_config.dart       # Widget size mapping
+│   │   └── widget_design.dart       # Design model (clock + background)
 │   ├── screens/
 │   │   ├── home_screen.dart         # Main screen + deep link
-│   │   ├── editor_screen.dart       # Customize clock
+│   │   ├── editor_screen.dart       # Customize clock + background
 │   │   ├── presets_screen.dart      # Grid of presets
-│   │   └── settings_screen.dart     # IAP + About
+│   │   ├── settings_screen.dart     # IAP + About
+│   │   ├── crop_screen.dart         # Image crop for background
+│   │   └── my_designs_screen.dart   # Saved designs CRUD
 │   ├── widgets/
-│   │   ├── clock_preview.dart       # Live clock display
+│   │   ├── clock_preview.dart       # Live clock + background display
 │   │   ├── preset_card.dart         # Preset grid card
 │   │   └── ad_banner.dart           # AdMob banner
 │   ├── services/
@@ -71,16 +78,40 @@ date_time_widget/
 │   │   ├── reward_service.dart      # Daily reward logic
 │   │   ├── notification_service.dart# Flutter→Native bridge
 │   │   ├── widget_bridge.dart       # Flutter→Widget bridge
-│   │   └── floating_bar_bridge.dart # Flutter→Overlay bridge
+│   │   ├── floating_bar_bridge.dart # Flutter→Overlay bridge
+│   │   ├── design_storage_service.dart # My Designs CRUD
+│   │   └── share_service.dart       # Render + share PNG
 │   └── utils/
 │       ├── date_formatter.dart      # Time/date/day formatting
-│       └── constants.dart           # Ad unit IDs, test_ads flag
-├── android/app/src/main/kotlin/.../
+│       ├── constants.dart           # Ad unit IDs, enableAds/testAds flags
+│       └── image_utils.dart         # Resize, crop, bitmap operations
+├── android/app/src/main/kotlin/io/photoclock/widget/
 │   ├── MainActivity.kt              # MethodChannel hub
-│   ├── DateTimeWidgetProvider.kt    # Home screen widget
+│   ├── DateTimeWidgetProvider.kt    # Home screen widget + bitmap BG
 │   ├── NotificationIconService.kt   # Persistent notification
 │   ├── FloatingBarService.kt        # Overlay foreground service
 │   ├── TimeTickService.kt           # ACTION_TIME_TICK receiver
 │   └── BootReceiver.kt              # Reboot recovery
+├── android/app/src/main/res/
+│   ├── layout/widget_2x1.xml        # Widget layouts (FrameLayout + ImageView)
+│   ├── layout/widget_3x1.xml
+│   ├── layout/widget_4x1.xml
+│   ├── layout/widget_4x2.xml
+│   └── xml/file_paths.xml           # FileProvider paths (legacy, may remove)
 └── test/                            # 91 unit tests
 ```
+
+## Packages Used
+
+| Package | Purpose |
+|---------|---------|
+| `shared_preferences` | Local config persistence |
+| `google_mobile_ads` | AdMob banner + rewarded |
+| `in_app_purchase` | Remove Ads IAP |
+| `flutter_local_notifications` | Notification icon |
+| `permission_handler` | Runtime permissions |
+| `image_picker` | Gallery image selection |
+| `image_cropper` | Image crop for background |
+| `path_provider` | App documents directory |
+| `share_plus` | System share sheet |
+| `sentry_flutter` | Error tracking |

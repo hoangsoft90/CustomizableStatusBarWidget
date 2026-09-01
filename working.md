@@ -1,24 +1,51 @@
 # Working — Date & Time Widget
 
-> Cập nhật lần cuối: 2026-08-31
+> Cập nhật lần cuối: 2026-09-01
 
 ## Trạng Thái Hiện Tại
 
 **Version:** 1.0.0+1 (chưa release)
+**Package ID:** `io.photoclock.widget`
 **Build:** GitHub Actions ✅ passing
 **Tests:** 91/91 pass ✅
-**Package ID:** `com.example.date_time_widget` (tạm)
-**OpenSpec:** 35 specs
+**OpenSpec:** 42 specs
+**Ads:** Production IDs, `enableAds=true`, `testAds=false`
+**Sentry:** Enabled (error tracking)
+**Privacy Policy:** https://all-my-apps-5d52f.web.app/privacy.html
 
 ## Đã Hoàn Thành
 
+### Session 2026-09-01 (latest)
+
+- [2026-09-01] **plan8_final.md** — Task 1: Bitmap decode + inSampleSize + 800px cap (thay vì URI/FileProvider)
+- [2026-09-01] **plan8_final.md** — Task 2: Resize giữ background (onAppWidgetOptionsChanged không xóa)
+- [2026-09-01] **plan8_final.md** — Task 3: Bỏ overlay #59000000, thêm text shadow
+- [2026-09-01] **plan8_final.md** — Task 4: Save loading (_isSaving) + error reporting
+- [2026-09-01] **Code review** — Fix formatting, bitmap lifecycle
+- [2026-09-01] **AdMob production** — `enableAds=true`, `testAds=false`, real IDs
+- [2026-09-01] **Package rename** — `com.example.date_time_widget` → `io.photoclock.widget`
+- [2026-09-01] **OpenSpec update** — 7 specs updated (app-constants, admob-service, ad-banner, editor-screen, home-widget-native, widget-bridge, local-storage)
+- [2026-09-01] **Sentry integration** — `sentry_flutter ^9.28.0` + DSN in main.dart
+- [2026-09-01] **.project/ Knowledge Items** — ai-rules, README, architecture, state, patterns all updated
+- [2026-09-01] **working.md** — Updated with full session progress
+
+### Session 2026-08-31
+
 - [2026-08-31] **plan5_final.md** — Phase 1: Models (WidgetDesign, BackgroundConfig) + DesignStorageService + ImageUtils
-- [2026-08-31] **plan5_final.md** — Phase 2: Background UI in Editor (None/Solid/Gradient/Image) + CropScreen + ClockPreview background rendering
-- [2026-08-31] **plan5_final.md** — Phase 3: Home Widget native (ImageView in 4 XML layouts, applyWidgetBackground, onAppWidgetOptionsChanged)
+- [2026-08-31] **plan5_final.md** — Phase 2: Background UI in Editor + CropScreen + ClockPreview backgrounds
+- [2026-08-31] **plan5_final.md** — Phase 3: Home Widget native (ImageView in 4 XML layouts)
 - [2026-08-31] **plan5_final.md** — Phase 4: My Designs screen (CRUD, quota 3, apply flow)
 - [2026-08-31] **plan5_final.md** — Phase 5: Share (render PNG 1080×540, system share sheet)
 - [2026-08-31] **plan5_final.md** — Phase 6: QA (static review, QA_PLAN5.md checklist)
-- [2026-08-31] **OpenSpec** — 6 specs updated + 6 specs created (plan5 coverage)
+- [2026-08-31] **plan6_final.md** — Bug A: HomeScreen bg param + EditorScreen color picker
+- [2026-08-31] **plan6_final.md** — Bug B: FileProvider + bitmap render on native widget
+- [2026-08-31] **plan7_final.md** — Task 1: Loading state (_isProcessingImage)
+- [2026-08-31] **plan7_final.md** — Task 2: Native MethodChannel (getActiveWidgetIds + setWidgetBackground)
+- [2026-08-31] **plan7_final.md** — Task 3.5: Cache-busting (timestamped bg filenames)
+- [2026-08-31] **OpenSpec baseline** — 31 specs created → expanded to 35
+
+### Session 2026-08-30
+
 - [2026-08-30] **plan3_final.md** — Task A: Remove showSeconds (fix bug 08:35:42:42)
 - [2026-08-30] **plan3_final.md** — Task B: Daily Reward Entitlement (RewardService, max 2/day)
 - [2026-08-30] **plan3_final.md** — Task C: Rewrite tests (69 → 91 tests)
@@ -33,6 +60,9 @@
 - [2026-08-30] **app-ads.txt** — Firebase Hosting
 - [2026-08-30] **chplay.md** — Store listing draft (JotBird)
 - [2026-08-30] **GitHub Actions workflow** — Debug APK build
+
+### Earlier (2026-08-29)
+
 - [2026-08-29] **Prompt 7** — Floating Bar (P1 overlay service)
 - [2026-08-29] **Prompt 6** — AdMob + IAP integration
 - [2026-08-29] **Prompt 5** — Notification icon + boot receiver
@@ -43,20 +73,19 @@
 
 ## Todo — Trước Khi Release
 
-- [ ] Đổi package ID từ `com.example` sang org thật
-- [ ] Thay production AdMob IDs (flip `testAds = false`)
+- [ ] Build debug APK trên device thật (Task 5 plan8 — smoke test 10 cases)
 - [ ] Upload keystore release signing
 - [ ] Data Safety form trên Play Console
 - [ ] Content Rating questionnaire
 - [ ] Store listing screenshots (4 ảnh)
-- [ ] Feature Graphic (1024x500)
+- [ ] Feature Graphic upload to Play Console
+- [ ] appOpenAdUnitId production ID (chưa có từ AdMob)
 
 ## Todo — P1 Features
 
-- [x] ~~Share preset dưới dạng ảnh~~ (plan5 Phase 5)
 - [ ] Test Floating Bar trên Android 15+ thật
 - [ ] Thêm preset theo mùa/tuần
-- [ ] Multiple widget instance
+- [ ] Multiple widget instance với style khác nhau
 
 ## Todo — Tech Debt
 
@@ -66,6 +95,7 @@
 - [ ] Persist BackgroundConfig to SharedPreferences (currently lost on app restart)
 - [ ] Native blur support (currently Flutter preview only)
 - [ ] Auto text contrast computation (flag stored but not active)
+- [ ] Remove legacy `file_paths.xml` + FileProvider (plan8 removed URI approach)
 
 ## Known Issues
 
@@ -75,10 +105,12 @@
 | ClockData duplicated in 3 Kotlin files | Low | Known |
 | `parseClockData` uses regex | Low | Known |
 | `formatTime` replaces ALL `a` chars | Low | Known |
-| BackgroundConfig not persisted (lost on restart) | Medium | Known, plan5 |
-| Blur only in Flutter preview (not native widget) | Low | Known, plan5 |
-| Auto text contrast flag stored but not computed | Low | Known, plan5 |
-| onAppWidgetOptionsChanged needs app running to re-bake | Low | Known, plan5 |
+| BackgroundConfig not persisted (lost on restart) | Medium | Known |
+| Blur only in Flutter preview (not native widget) | Low | Known |
+| Auto text contrast flag stored but not computed | Low | Known |
+| onAppWidgetOptionsChanged needs app running to re-bake | Low | Known |
+| White text on white BG readability | Medium | Known |
+| appOpenAdUnitId placeholder | Low | Known |
 
 ## Build History
 
@@ -92,5 +124,5 @@
 | #6 | ✅ | — |
 | #7 | ❌ | XML parsing (unescaped &) |
 | #8 | ✅ | — |
-| #9+ | ✅ | All plan3 changes |
-| #10+ | ✅ | All plan5 changes (pending push) |
+| #9-10 | ✅ | plan3 + plan5 changes |
+| #11+ | ✅ | plan6-8 + package rename + Sentry |

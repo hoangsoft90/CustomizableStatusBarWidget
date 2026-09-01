@@ -86,6 +86,47 @@ Each of the 3 native Kotlin files (`DateTimeWidgetProvider`, `NotificationIconSe
 | **State management library** | Overkill for this app size |
 | **Code generation for JSON** | Adds build complexity, not needed |
 
+### 6. Bitmap Background Pipeline (plan5-8)
+
+Editor bakes bitmap per-widget-size → saves to `widget_bg/bg_{millis}.png` → MethodChannel to native → native decodes with `inSampleSize` + 800px cap → `setImageViewBitmap` on RemoteViews.
+
+**Why:** `setImageViewUri` + FileProvider caused Binder IPC issues. `setImageViewBitmap` with controlled size is safer.
+
+**Pattern:**
+```dart
+// Flutter: bake per-widget size
+final bitmap = await bakeBackgroundBitmap(bgConfig, width, height);
+final file = await saveBakedBitmap(bitmap, widgetId);
+WidgetBridge.setWidgetBackground(widgetId, file.path);
+```
+```kotlin
+// Native: decode + downsample
+val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+BitmapFactory.decodeFile(bgPath, opts)
+opts.inSampleSize = calculateInSampleSize(opts, 800, 800)
+opts.inJustDecodeBounds = false
+val bitmap = BitmapFactory.decodeFile(bgPath, opts)
+views.setImageViewBitmap(R.id.widget_background, bitmap)
+```
+
+### 7. Cache-Busting via Timestamp (plan7)
+
+Bitmap filenames use `bg_{DateTime.now().millisecondsSinceEpoch}.png` instead of fixed `current_bg.png`. Old files cleaned up best-effort.
+
+**Why:** Android widget Launcher caches RemoteViews bitmaps by file path. Same filename = stale bitmap after image change.
+
+### 8. Text Shadow Instead of Overlay (plan8)
+
+TextViews use `shadowColor="#AA000000"` + `shadowDx=0` + `shadowDy=1` instead of a hardcoded `#59000000` overlay on LinearLayout.
+
+**Why:** Overlay darkened ALL backgrounds equally (including already-dark ones). Text shadow is adaptive and preserves background vibrancy.
+
+### 9. enableAds Master Switch (plan8)
+
+`AppConstants.enableAds` is a compile-time const. When `false`, every method in `AdsService` short-circuits immediately — no `MobileAds.init()`, no banner load, no rewarded preload.
+
+**Why:** Clean toggle for development vs production. Prevents accidental ad calls during testing.
+
 ## Known Technical Debt
 
 | Debt | Impact | Planned Fix |
@@ -94,3 +135,5 @@ Each of the 3 native Kotlin files (`DateTimeWidgetProvider`, `NotificationIconSe
 | Alignment not applied on Widget (RemoteViews) | Widget always centered | Layout XML variants in v1.1 |
 | TimeTickService no auto-stop | Runs until app killed | Acceptable for clock app |
 | `parseClockData` uses regex (not JSON parser) | Fragile if JSON has nested objects | Acceptable for flat config |
+| Legacy `file_paths.xml` + FileProvider unused | Dead file after plan8 removed URI approach | Remove in cleanup pass |
+| White text on white BG readability | Text shadow insufficient for extreme cases | Consider auto-contrast in v1.1 |
