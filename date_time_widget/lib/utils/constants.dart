@@ -7,7 +7,7 @@
 class AppConstants {
   // ── Ad Flags ─────────────────────────────────────────────
   /// Master switch for all ads. Set `false` to disable completely.
-  static const bool enableAds = false;
+  static const bool enableAds = true;
 
   /// When `true`, uses AdMob test ad unit IDs (safe for dev).
   /// When `false`, uses production ad unit IDs.
