@@ -1,4 +1,4 @@
-package com.example.date_time_widget
+package io.photoclock.widget
 
 import android.content.BroadcastReceiver
 import android.content.Context

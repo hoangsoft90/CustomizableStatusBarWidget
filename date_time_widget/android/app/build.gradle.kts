@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.date_time_widget"
+    namespace = "io.photoclock.widget"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -16,7 +16,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.date_time_widget"
+        applicationId = "io.photoclock.widget"
         minSdk = flutter.minSdkVersion
         targetSdk = 36 // Google Play requires API 36 from 31/8/2026
         versionCode = flutter.versionCode

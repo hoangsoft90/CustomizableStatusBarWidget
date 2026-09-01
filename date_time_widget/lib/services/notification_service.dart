@@ -14,7 +14,7 @@ import 'storage_service.dart';
 /// #3: update() now passes configJson to native via MethodChannel.
 class NotificationService {
   static const _channel =
-      MethodChannel('com.example.date_time_widget/notification');
+      MethodChannel('io.photoclock.widget/notification');
 
   final StorageService _storage;
 

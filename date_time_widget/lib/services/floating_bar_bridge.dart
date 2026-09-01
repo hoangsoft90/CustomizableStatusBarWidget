@@ -6,7 +6,7 @@ import 'package:flutter/services.dart';
 /// Native saves it to "status_bar_config" SharedPreferences.
 class FloatingBarBridge {
   static const _channel =
-      MethodChannel('com.example.date_time_widget/floating_bar');
+      MethodChannel('io.photoclock.widget/floating_bar');
 
   /// Check if SYSTEM_ALERT_WINDOW permission is granted.
   static Future<bool> hasOverlayPermission() async {

@@ -73,7 +73,7 @@ class DateWidgetApp extends StatefulWidget {
 class _DateWidgetAppState extends State<DateWidgetApp>
     with WidgetsBindingObserver {
   final _deepLinkChannel = MethodChannel(
-    'com.example.date_time_widget/deep_link',
+    'io.photoclock.widget/deep_link',
   );
 
   /// Global key to access HomeScreen state for triggering editor open

@@ -11,7 +11,7 @@ import '../models/clock_config.dart';
 /// #3: Now passes the config JSON to native via MethodChannel.
 /// Native saves it to "status_bar_config" SharedPreferences.
 class WidgetBridge {
-  static const _channel = MethodChannel('com.example.date_time_widget/widgets');
+  static const _channel = MethodChannel('io.photoclock.widget/widgets');
 
   /// Tell the native [DateTimeWidgetProvider] to re-read config and
   /// redraw every widget instance now.

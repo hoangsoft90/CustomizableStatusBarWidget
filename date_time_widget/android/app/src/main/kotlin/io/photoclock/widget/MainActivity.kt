@@ -1,4 +1,4 @@
-package com.example.date_time_widget
+package io.photoclock.widget
 
 import android.content.Intent
 import android.net.Uri
@@ -10,9 +10,9 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
 
-    private val WIDGET_CHANNEL = "com.example.date_time_widget/widgets"
-    private val NOTIF_CHANNEL = "com.example.date_time_widget/notification"
-    private val FLOATING_CHANNEL = "com.example.date_time_widget/floating_bar"
+    private val WIDGET_CHANNEL = "io.photoclock.widget/widgets"
+    private val NOTIF_CHANNEL = "io.photoclock.widget/notification"
+    private val FLOATING_CHANNEL = "io.photoclock.widget/floating_bar"
     private var deepLinkChannel: MethodChannel? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -21,7 +21,7 @@ class MainActivity : FlutterActivity() {
         // ── Deep link channel (widget tap → editor) ─────────
         deepLinkChannel = MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
-            "com.example.date_time_widget/deep_link",
+            "io.photoclock.widget/deep_link",
         )
         handleDeepLink(intent)
 
