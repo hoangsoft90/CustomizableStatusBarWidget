@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Displays an AdMob adaptive banner. Returns `SizedBox.shrink()` when `show` is `false` (premium users). Manages BannerAd lifecycle internally.
+Displays an AdMob adaptive banner. Returns `SizedBox.shrink()` when `show` is `false` (premium users or ads disabled). Manages BannerAd lifecycle internally.
 
 ## Requirements
 
@@ -18,13 +18,19 @@ When `show == false`, renders `SizedBox.shrink()` — no ad is loaded or display
 
 ### R2: Auto-load on mount
 
-When `show == true` during `initState`, `_loadAd()` is called immediately.
+When `show == true` during `initState`, `_loadAd()` is called immediately. If `AppConstants.enableAds == false`, `_loadAd()` returns without loading.
 
 **Scenario: Banner loads on creation**
-- Given `show: true`
+- Given `show: true` and `AppConstants.enableAds == true`
 - When AdBanner is created
 - Then a BannerAd is created with `AppConstants.bannerAdUnitId` and `.load()` is called
 - Reference: `lib/widgets/ad_banner.dart:34-36`
+
+**Scenario: Ads disabled — no load**
+- Given `show: true` but `AppConstants.enableAds == false`
+- When AdBanner is created
+- Then no BannerAd is created and `_isLoaded` stays `false`
+- Reference: `lib/widgets/ad_banner.dart:34-36` (early return)
 
 ### R3: Reload on show toggle
 

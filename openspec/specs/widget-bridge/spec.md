@@ -42,23 +42,23 @@ All MethodChannel calls are wrapped in try-catch for `PlatformException`, silent
 - Then `PlatformException` is caught and the method returns default value (false/void)
 - Reference: `lib/services/widget_bridge.dart:18-22`, `30-33`
 
-### R4: setWidgetBackground — per-widget bitmap path (plan5 §3)
+### R4: setWidgetBackground — shared bitmap path (plan5 §3, plan8 §1)
 
-`setWidgetBackground(widgetId, bitmapPath)` saves the baked bitmap file path for a specific widget instance in SharedPreferences under key `widget_bg_{widgetId}`.
+`setWidgetBackground(widgetId, bitmapPath)` saves the baked bitmap file path to a shared SharedPreferences namespace `widget_background` with key `bg_bitmap_path`. This is a single global path (not per-widgetId) because all widget instances share the same background.
 
 **Scenario: Set background path**
-- Given `widgetId = 42`, `bitmapPath = '/data/.../designs/abc_42.png'`
-- When `WidgetBridge.setWidgetBackground(widgetId: 42, bitmapPath: '/data/.../designs/abc_42.png')` is called
-- Then native saves path to SharedPreferences `"widget_bg_42"`
-- And re-renders widget instance 42
-- Reference: `lib/services/widget_bridge.dart:36-48`
+- Given `bitmapPath = '/data/.../widget_bg/bg_1234567890.png'`
+- When `WidgetBridge.setWidgetBackground(widgetId: 42, bitmapPath: bitmapPath)` is called
+- Then native saves path to SharedPreferences namespace `widget_background`, key `bg_bitmap_path`
+- And re-renders widget instance 42 via `DateTimeWidgetProvider.renderWidget()`
+- Reference: `lib/services/widget_bridge.dart:36-50`
 
 **Scenario: Clear background**
-- Given `widgetId = 42` has a background path
+- Given a background path exists in SharedPreferences
 - When `WidgetBridge.setWidgetBackground(widgetId: 42, bitmapPath: null)` is called
-- Then native removes key `"widget_bg_42"` from SharedPreferences
+- Then key `bg_bitmap_path` is removed from SharedPreferences namespace `widget_background`
 - And widget falls back to default dark background
-- Reference: `lib/services/widget_bridge.dart:36-48`
+- Reference: `lib/services/widget_bridge.dart:36-50`
 
 ### R5: getActiveWidgetIds — list all widget instances (plan5 §3)
 

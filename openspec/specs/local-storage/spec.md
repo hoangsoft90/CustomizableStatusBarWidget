@@ -65,3 +65,29 @@ The `prefs` getter exposes the underlying SharedPreferences for edge cases (e.g.
 - Given `storage.prefs.getBool('notificationEnabled')`
 - Then the value is read directly from SharedPreferences, bypassing ClockConfig
 - Reference: `lib/services/storage_service.dart:44`
+
+### R6: widget_background namespace (plan6/plan8)
+
+Native widget background bitmap path is stored in a separate SharedPreferences namespace `widget_background` with key `bg_bitmap_path`. This is shared between Flutter (via MethodChannel) and native Kotlin code.
+
+**Scenario: Read background path**
+- Given SharedPreferences has `widget_background/bg_bitmap_path` set
+- When native `readBackgroundPath()` reads it
+- Then the full file path is returned
+- Reference: `DateTimeWidgetProvider.kt:72-78`
+
+**Scenario: No background**
+- Given SharedPreferences has no `bg_bitmap_path` in `widget_background`
+- When `readBackgroundPath()` is called
+- Then `null` is returned
+- Reference: `DateTimeWidgetProvider.kt:72-78`
+
+### R7: status_bar_config namespace
+
+Native widget clock config is stored in SharedPreferences namespace `status_bar_config` with key `clock_config`. Flutter writes via MethodChannel, native reads in `DateTimeWidgetProvider`.
+
+**Scenario: Config round-trip**
+- Given Flutter saves config JSON via `WidgetBridge.updateWidgets()`
+- When native `readConfig()` reads `status_bar_config/clock_config`
+- Then the JSON is parsed into a `ClockData` object
+- Reference: `DateTimeWidgetProvider.kt:122-129`

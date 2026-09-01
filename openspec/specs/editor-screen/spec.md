@@ -233,6 +233,66 @@ When `storage` is null (called from MyDesignsScreen for creating new design), Sa
 - And no config is written to SharedPreferences
 - Reference: `lib/screens/editor_screen.dart:110-115`
 
+### R18: Image pick loading state (plan7 §1)
+
+When user selects a background image, a loading overlay with `CircularProgressIndicator` and "Preparing image…" text is shown over the Background section. The Image chip is disabled during processing to prevent double-tap.
+
+**Scenario: Loading overlay shown**
+- Given user taps "Image" background type and picks from gallery
+- When the picked image is being processed (copied + resized)
+- Then `CircularProgressIndicator` + "Preparing image…" appears over Background section
+- And the Image chip is disabled (opacity 0.4)
+- Reference: `lib/screens/editor_screen.dart:86,278,321,403,941`
+
+**Scenario: Loading dismissed on completion**
+- Given the loading overlay is showing
+- When image processing completes (success or error)
+- Then `_isProcessingImage` is set to `false` via `finally` block
+- And the overlay disappears
+- Reference: `lib/screens/editor_screen.dart:327`
+
+**Scenario: Error shows SnackBar**
+- Given image processing fails
+- When the catch block runs
+- Then a SnackBar "Could not process image. Try another." is shown
+- And `_isProcessingImage` is set to `false`
+- Reference: `lib/screens/editor_screen.dart:324-327`
+
+### R19: Cache-busting for widget background (plan7 §3.5)
+
+When baking widget background bitmap, the filename uses a timestamp (`bg_{millis}.png`) instead of a fixed name (`current_bg.png`). Old bitmap files are cleaned up (best-effort).
+
+**Scenario: Timestamped filename**
+- Given user saves a design with image background
+- When `_bakeAndSetWidgetBackground()` writes the bitmap
+- Then filename is `bg_{DateTime.now().millisecondsSinceEpoch}.png`
+- Reference: `lib/screens/editor_screen.dart:230`
+
+**Scenario: Old files cleaned up**
+- Given the `widget_bg/` directory has previous bitmap files
+- When a new bitmap is written
+- Then old `.png` files in `widget_bg/` are deleted (best-effort, errors caught)
+- Reference: `lib/screens/editor_screen.dart:232-239`
+
+### R20: Save button loading state (plan8 §4)
+
+When user taps Save, a loading indicator replaces the save icon and the button is disabled until save completes.
+
+**Scenario: Save in progress**
+- Given user taps "Save"
+- When `_save()` is running
+- Then `_isSaving == true`
+- And the save button shows a `CircularProgressIndicator`
+- And the button is disabled (onPressed: null)
+- Reference: `lib/screens/editor_screen.dart:156,199-204`
+
+**Scenario: Save completes**
+- Given `_isSaving == true`
+- When `_save()` finishes (success or error)
+- Then `_isSaving == false` via `finally` block
+- And the save button returns to normal
+- Reference: `lib/screens/editor_screen.dart:161`
+
 ## Need to clear
 
 1. **`_savedConfig` is declared with `late` after `initState` uses it** — Dart allows this but the declaration order is reversed from typical style. Code compiles and works correctly.

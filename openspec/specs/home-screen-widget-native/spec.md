@@ -129,24 +129,41 @@ All 4 layout XML files use `FrameLayout` as root, with `ImageView#widget_backgro
 - Then `widget_background` ImageView exists with `scaleType="centerCrop"` and `visibility="gone"`
 - Reference: `widget_2x1.xml`, `widget_3x1.xml`, `widget_4x1.xml`, `widget_4x2.xml`
 
-### R11: applyWidgetBackground — read baked bitmap (plan5 §2.2, §2.3)
+### R11: applyWidgetBackground — read baked bitmap (plan5 §2.2, plan8 §1)
 
-`applyWidgetBackground()` reads the bitmap path from SharedPreferences key `widget_bg_{widgetId}`, decodes the bitmap, and sets it on the ImageView.
+`applyWidgetBackground()` reads the bitmap path from SharedPreferences namespace `widget_background` (key `bg_bitmap_path`), decodes the bitmap with `inSampleSize` downscaling, caps at 800px max side, and sets it on the ImageView via `setImageViewBitmap`.
 
 **Scenario: Bitmap exists**
-- Given SharedPreferences has `"widget_bg_42" → "/data/.../designs/abc_42.png"`
-- When `applyWidgetBackground(context, views, 42)` runs
-- Then `BitmapFactory.decodeFile()` loads the bitmap
-- And `views.setImageViewBitmap(R.id.widget_background, bitmap)` sets it
+- Given SharedPreferences has `bg_bitmap_path` pointing to a valid PNG
+- When `applyWidgetBackground(context, views, widgetId)` runs
+- Then `BitmapFactory.decodeFile()` loads the bitmap with `inSampleSize` for large images
+- And if `maxSide > 800`, the bitmap is scaled down to 800px max via `Bitmap.createScaledBitmap()`
+- And `views.setImageViewBitmap(R.id.widget_background, finalBitmap)` sets it
 - And `views.setViewVisibility(R.id.widget_background, VISIBLE)` makes it visible
-- Reference: `DateTimeWidgetProvider.kt:162-180`
+- Reference: `DateTimeWidgetProvider.kt:195-241`
 
 **Scenario: No bitmap — fallback**
-- Given SharedPreferences has no key `"widget_bg_42"`
-- When `applyWidgetBackground(context, views, 42)` runs
+- Given SharedPreferences has no `bg_bitmap_path` or file doesn't exist
+- When `applyWidgetBackground(context, views, widgetId)` runs
 - Then `views.setViewVisibility(R.id.widget_background, GONE)` hides ImageView
 - And widget displays text on default dark background
-- Reference: `DateTimeWidgetProvider.kt:176-180`
+- Reference: `DateTimeWidgetProvider.kt:200-204`
+
+**Scenario: Decode error — fallback**
+- Given `bg_bitmap_path` points to a corrupted file
+- When `BitmapFactory.decodeFile()` returns null
+- Then `Log.e()` is called and ImageView stays GONE
+- Reference: `DateTimeWidgetProvider.kt:237`
+
+### R11b: calculateInSampleSize — memory optimization
+
+`calculateInSampleSize(options, reqWidth, reqHeight)` computes the optimal `inSampleSize` power-of-2 value for downsampling large bitmaps to avoid OOM.
+
+**Scenario: Large image downsampled**
+- Given a 3000×2000 source image
+- When decoded with `reqWidth=800, reqHeight=800`
+- Then `inSampleSize` is 4 (renders at 750×500)
+- Reference: `DateTimeWidgetProvider.kt:243-253`
 
 ### R12: saveWidgetBackground — static method (plan5 §3)
 
@@ -166,14 +183,25 @@ All 4 layout XML files use `FrameLayout` as root, with `ImageView#widget_backgro
 - And widget re-renders with default background
 - Reference: `DateTimeWidgetProvider.kt:51-60`
 
-### R13: onAppWidgetOptionsChanged — resize re-bake (plan5 §11)
+### R13: onAppWidgetOptionsChanged — resize preserves background (plan8 §2)
 
-When user resizes a widget, `onAppWidgetOptionsChanged()` clears the cached bitmap path for that widget instance, forcing Flutter to re-bake on next update.
+When user resizes a widget, `onAppWidgetOptionsChanged()` re-renders the widget WITHOUT clearing the cached bitmap path. The existing bitmap is reused at the new size. Flutter will re-bake on the next save/apply cycle.
 
-**Scenario: Widget resized**
-- Given widget instance 42 has cached bitmap `"widget_bg_42"`
+**Scenario: Widget resized — background preserved**
+- Given widget instance 42 has cached bitmap in SharedPreferences
 - When user drags to resize widget
-- Then `onAppWidgetOptionsChanged()` removes key `"widget_bg_42"` from SharedPreferences
-- And `renderWidget(context, mgr, 42)` re-renders with default background
-- And Flutter re-bakes bitmap for new size on next update
-- Reference: `DateTimeWidgetProvider.kt:127-138`
+- Then `onAppWidgetOptionsChanged()` calls `renderWidget()` only
+- And the bitmap path is NOT removed from SharedPreferences
+- And the existing bitmap continues to display at the new size
+- Reference: `DateTimeWidgetProvider.kt:130-140`
+
+### R14: Text shadow on all TextViews (plan8 §3)
+
+All TextViews (`widget_day`, `widget_date`, `widget_time`) in all 4 layout XML files have `shadowColor="#AA000000"` and `shadowDx=0` `shadowDy=1` for text readability over any background.
+
+**Scenario: Text shadow applied**
+- Given any widget layout XML
+- When the widget renders
+- Then all 3 TextViews have shadow attributes
+- And no hardcoded color overlay (no `#59000000` or `#CC000000`) exists on the LinearLayout
+- Reference: `widget_2x1.xml`, `widget_3x1.xml`, `widget_4x1.xml`, `widget_4x2.xml`
