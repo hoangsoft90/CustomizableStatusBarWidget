@@ -5,8 +5,10 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.util.Log
 import android.widget.RemoteViews
-import androidx.core.content.FileProvider
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -199,23 +201,60 @@ class DateTimeWidgetProvider : AppWidgetProvider() {
 
             if (bgPath != null && File(bgPath).exists()) {
                 try {
-                    val uri = FileProvider.getUriForFile(
-                        context, "${context.packageName}.fileprovider", File(bgPath)
-                    )
-                    context.grantUriPermission(
-                        "com.android.systemui", uri,
-                        Intent.FLAG_GRANT_READ_URI_PERMISSION
-                    )
-                    views.setImageViewUri(R.id.widget_background, uri)
-                    views.setViewVisibility(R.id.widget_background, android.view.View.VISIBLE)
-                    return
-                } catch (_: Exception) {
-                    // Fall through to default background
+                    // Decode bitmap with inSampleSize to avoid OOM on large files
+                    val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                    BitmapFactory.decodeFile(bgPath, opts)
+                    val sampleSize = calculateInSampleSize(opts, 800, 800)
+                    val decodeOpts = BitmapFactory.Options().apply { inSampleSize = sampleSize }
+                    val bitmap = BitmapFactory.decodeFile(bgPath, decodeOpts)
+
+                    if (bitmap != null) {
+                        // Scale down if longest edge > 800px
+                        val maxSide = maxOf(bitmap.width, bitmap.height)
+                        val finalBitmap = if (maxSide > 800) {
+                            val scale = 800f / maxSide
+                            val scaled = Bitmap.createScaledBitmap(
+                                bitmap,
+                                (bitmap.width * scale).toInt(),
+                                (bitmap.height * scale).toInt(),
+                                true
+                            )
+                            if (scaled !== bitmap) bitmap.recycle()
+                            scaled
+                        } else {
+                            bitmap
+                        }
+
+                        views.setImageViewBitmap(R.id.widget_background, finalBitmap)
+                        views.setViewVisibility(R.id.widget_background, android.view.View.VISIBLE)
+                        return
+                    }
+                } catch (e: Exception) {
+                    Log.e("WidgetBg", "applyWidgetBackground failed", e)
                 }
             }
 
             // No bitmap — hide ImageView, rely on default dark background
             views.setViewVisibility(R.id.widget_background, android.view.View.GONE)
+        }
+
+        private fun calculateInSampleSize(
+            options: BitmapFactory.Options,
+            reqWidth: Int,
+            reqHeight: Int,
+        ): Int {
+            val height = options.outHeight
+            val width = options.outWidth
+            var inSampleSize = 1
+            if (height > reqHeight || width > reqWidth) {
+                val halfHeight = height / 2
+                val halfWidth = width / 2
+                while (halfHeight / inSampleSize >= reqHeight &&
+                       halfWidth / inSampleSize >= reqWidth) {
+                    inSampleSize *= 2
+                }
+            }
+            return inSampleSize
         }
 
         private fun formatDisplay(cal: Calendar, config: ClockData): DisplayData {
@@ -280,12 +319,9 @@ class DateTimeWidgetProvider : AppWidgetProvider() {
         widgetId: Int,
         newOptions: android.os.Bundle,
     ) {
-        // User resized widget — clear cached bitmap so Flutter can re-bake
-        // for the new size on next update
-        val prefs = context.getSharedPreferences(BG_PREFS, Context.MODE_PRIVATE)
-        prefs.edit().remove(BG_PATH_KEY).apply()
-
-        // Re-render with current config (no bitmap until Flutter re-bakes)
+        // Re-render with current background intact — do NOT remove BG_PATH_KEY
+        // because that would delete background for ALL widget instances.
+        // Background bitmap is already baked at a size that centerCrop scales.
         renderWidget(context, appWidgetManager, widgetId)
     }
 

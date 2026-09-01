@@ -84,6 +84,7 @@ class _EditorScreenState extends State<EditorScreen> {
   late BackgroundConfig _background;
   final ImagePicker _picker = ImagePicker();
   bool _isProcessingImage = false;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -152,38 +153,41 @@ class _EditorScreenState extends State<EditorScreen> {
         background: _savedBackground,
       ));
     }
-  }
+  }  Future<void> _save() async {
+    setState(() => _isSaving = true);
+    try {
+      _savedConfig = _config;
+      _savedBackground = _background;
 
-  Future<void> _save() async {
-    _savedConfig = _config;
-    _savedBackground = _background;
+      if (widget.storage != null) {
+        // Global config save flow
+        await widget.storage!.saveConfig(_config);
 
-    if (widget.storage != null) {
-      // Global config save flow
-      await widget.storage!.saveConfig(_config);
+        // Bake background bitmap for native widget
+        await _bakeAndSetWidgetBackground();
 
-      // Bake background bitmap for native widget
-      await _bakeAndSetWidgetBackground();
-
-      WidgetBridge.updateWidgets();
-      if (mounted) {
-        // Return both config AND background so HomeScreen can persist
-        Navigator.of(context).pop(EditorScreenResult(
-          config: _config,
-          background: _background,
-        ));
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Config saved')),
-        );
+        WidgetBridge.updateWidgets();
+        if (mounted) {
+          // Return both config AND background so HomeScreen can persist
+          Navigator.of(context).pop(EditorScreenResult(
+            config: _config,
+            background: _background,
+          ));
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Config saved')),
+          );
+        }
+      } else {
+        // Create-new-design flow — return result to caller
+        if (mounted) {
+          Navigator.of(context).pop(EditorScreenResult(
+            config: _config,
+            background: _background,
+          ));
+        }
       }
-    } else {
-      // Create-new-design flow — return result to caller
-      if (mounted) {
-        Navigator.of(context).pop(EditorScreenResult(
-          config: _config,
-          background: _background,
-        ));
-      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
@@ -249,8 +253,13 @@ class _EditorScreenState extends State<EditorScreen> {
           bitmapPath: bgFile.path,
         );
       }
-    } catch (_) {
-      // Best-effort — don't crash the save flow
+    } catch (e, st) {
+      debugPrint('bakeAndSetWidgetBackground failed: $e\n$st');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not update widget background')),
+        );
+      }
     }
   }
 
@@ -336,7 +345,16 @@ class _EditorScreenState extends State<EditorScreen> {
           onPressed: _onBack,
         ),
         actions: [
-          TextButton(onPressed: _save, child: const Text('Save')),
+          TextButton(
+            onPressed: _isSaving ? null : _save,
+            child: _isSaving
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('Save'),
+          ),
         ],
       ),
       body: Column(

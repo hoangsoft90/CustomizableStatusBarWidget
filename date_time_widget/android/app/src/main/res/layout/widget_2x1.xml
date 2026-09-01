@@ -11,14 +11,13 @@
         android:scaleType="centerCrop"
         android:visibility="gone" />
 
-    <!-- Text content overlay -->
+    <!-- Text content -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
         android:gravity="center"
-        android:padding="6dp"
-        android:background="#59000000">
+        android:padding="6dp">
 
         <TextView
             android:id="@+id/widget_day"
@@ -28,7 +27,11 @@
             android:textSize="8dp"
             android:maxLines="1"
             android:ellipsize="end"
-            android:gravity="center" />
+            android:gravity="center"
+            android:shadowColor="#80000000"
+            android:shadowDx="0"
+            android:shadowDy="1"
+            android:shadowRadius="3" />
 
         <TextView
             android:id="@+id/widget_date"
@@ -38,7 +41,11 @@
             android:textSize="7dp"
             android:maxLines="1"
             android:ellipsize="end"
-            android:gravity="center" />
+            android:gravity="center"
+            android:shadowColor="#80000000"
+            android:shadowDx="0"
+            android:shadowDy="1"
+            android:shadowRadius="3" />
 
         <TextView
             android:id="@+id/widget_time"
@@ -49,7 +56,11 @@
             android:textStyle="bold"
             android:maxLines="1"
             android:ellipsize="end"
-            android:gravity="center" />
+            android:gravity="center"
+            android:shadowColor="#80000000"
+            android:shadowDx="0"
+            android:shadowDy="1"
+            android:shadowRadius="3" />
 
     </LinearLayout>
 </FrameLayout>
