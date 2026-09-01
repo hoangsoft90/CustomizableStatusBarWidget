@@ -22,8 +22,9 @@
 | **Package ID** | `io.photoclock.widget` |
 | **Version** | 1.0.0+1 (chưa release) |
 | **Repo** | https://github.com/hoangsoft90/CustomizableStatusBarWidget |
-| **Build** | GitHub Actions (Flutter latest stable + Java 17) |
+| **Build** | GitHub Actions: Debug APK + Release AAB (signed keystore) |
 | **Target** | Android (SDK 36, minSdk from Flutter) |
+| **Release Keystore** | `photoclock-release.jks` in GH Secret |
 | **Contact** | haibasoftware@gmail.com |
 | **Sentry DSN** | Configured in `main.dart` |
 | **Privacy Policy** | https://all-my-apps-5d52f.web.app/privacy.html |

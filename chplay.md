@@ -7,23 +7,23 @@
 ### App Name (≤ 30 ký tự)
 
 ```
-Date & Time Widget
+Photo Clock Widget
 ```
-> 18 ký tự — gọn, rõ tính năng, SEO tốt cho từ khóa "widget" + "time"
+> 19 ký tự — nh Photo Clock Widgetnh mạnh tính năng cá nhân hóa ảnh nền + đồng hồ
 
 ### Short Description (≤ 80 ký tự)
 
 ```
-Custom clock widget for your home screen. Beautiful date, time & day display.
+Beautiful clock widget with photo backgrounds. Customize time, date & style.
 ```
-> 78 ký tự
+> 76 ký tự
 
 ### Full Description (≤ 4,000 ký tự — ASO optimized)
 
 ```
-🕐 Date & Time Widget — Your Home Screen, Beautifully Updated
+🕐 Photo Clock Widget — Your Home Screen, Beautifully Updated
 
-Tired of the boring default clock on your Android home screen? Date & Time Widget lets you customize every detail — from time format to colors, font sizes, and date display — all with a clean, elegant design.
+Tired of the boring default clock on your Android home screen? Photo Clock Widget lets you customize every detail — from time format to colors, font sizes, date display, and even photo backgrounds — all with a clean, elegant design.
 
 ✨ KEY FEATURES
 
@@ -34,6 +34,14 @@ Tired of the boring default clock on your Android home screen? Date & Time Widge
 • 12-hour or 24-hour time format
 • Choose from multiple date formats
 • Custom font size, text color, and alignment
+
+🖼️ Photo Backgrounds
+• Use any photo from your gallery as widget background
+• Pinch-to-zoom crop for perfect framing
+• Solid colors, gradients, or custom images
+• Dark/light overlay for text readability
+• Save up to 3 custom designs
+• Share your designs as images
 
 🎨 8 Beautiful Presets
 • Instantly apply curated styles: Classic, Modern, Minimal, Bold, and more
@@ -74,6 +82,10 @@ Tired of the boring default clock on your Android home screen? Date & Time Widge
 
 📋 WHAT'S INCLUDED
 ✅ Home screen clock widget (4 sizes)
+✅ Photo backgrounds with crop & zoom
+✅ Solid color & gradient backgrounds
+✅ Save up to 3 custom designs
+✅ Share designs as images
 ✅ 8 style presets
 ✅ 12h/24h time format
 ✅ Custom date & time formats
@@ -90,6 +102,7 @@ Tired of the boring default clock on your Android home screen? Date & Time Widge
 • Ads are served by Google AdMob (requires internet)
 • You can use the app fully offline — ads are optional
 • Privacy Policy: https://hoangsoft90.github.io/CustomizableStatusBarWidget/
+• User Guide: https://all-my-apps-5d52f.web.app/guide.html
 
 📞 SUPPORT
 Email: haibasoftware@gmail.com
@@ -250,7 +263,9 @@ Hiển thị: Notification shade đang mở
 ### ✅ AdMob Account Setup
 - [x] Publisher ID: `pub-6917313063209470`
 - [x] Test ad units configured (swap to prod for release)
-- [x] Test ads flag in code: `AppConstants.testAds = true`
+- [x] Real ad unit IDs configured
+- [x] Master switch: `AppConstants.enableAds = false` (toggle to enable)
+- [x] Test flag: `AppConstants.testAds = false`
 
 ### ✅ Store Listing Assets Checklist
 - [ ] Icon (512 × 512) — PNG, no alpha, no rounded corners
@@ -288,8 +303,8 @@ Hiển thị: Notification shade đang mở
 
 | Field | Value |
 |-------|-------|
-| **App Name** | Date & Time Widget |
-| **Package** | `com.example.date_time_widget` |
+| **App Name** | Photo Clock Widget |
+| **Package** | `io.photoclock.widget` |
 | **Min SDK** | 21 (Android 5.0) |
 | **Target SDK** | 36 (Android 16) |
 | **Privacy Policy** | `https://hoangsoft90.github.io/CustomizableStatusBarWidget/` |

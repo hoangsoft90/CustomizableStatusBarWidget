@@ -29,12 +29,17 @@
 | **User guide** | ✅ Done | Deployed to Firebase Hosting |
 | **targetSdkVersion 36** | ✅ Done | Google Play requirement |
 | **AI-rules + Knowledge Items** | ✅ Done | Updated for plan6-8 changes |
+| **Release AAB workflow** | ✅ Done | `.github/workflows/build-release-aab.yml` + signed keystore |
+| **Release keystore** | ✅ Done | `photoclock-release.jks`, alias `photoclock`, pass `83793900` |
+| **GH Secrets (keystore)** | ✅ Done | 4 secrets: KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD |
+| **R8 fix** | ✅ Done | Disabled isMinifyEnabled + isShrinkResources (Flutter incompatible) |
+| **AdMob verified** | ✅ Done | enableAds=true, testAds=false confirmed before AAB build |
 
 ## Todo List (Remaining)
 
 ### Before Release
 - [ ] Build debug APK on device (Task 5 plan8 — smoke test 10 cases)
-- [ ] Upload keystore release signing
+- [x] Release keystore + GH Secrets — Done
 - [ ] Data Safety form trên Play Console
 - [ ] Content Rating questionnaire
 - [ ] Store listing screenshots (4 ảnh)
@@ -95,6 +100,9 @@
 | Sentry for error tracking | Catch native + Flutter crashes | Session update |
 | shared BG_PREFS namespace (plan6) | Single background shared by all widget instances | plan6 §3 |
 | Cache-busting via timestamp (plan7) | Prevents stale bitmap after image change | plan7 §3.5 |
+| Release keystore fixed (not rotated) | Play Store requires same signing key | Session update |
+| R8 disabled for release | Flutter deferred components incompatible with R8 | Session update |
+| Release signing via GH Secrets | Avoids hardcoding keystore in repo | Session update |
 
 ## Build History
 
@@ -110,3 +118,5 @@
 | #8 | ✅ | — |
 | #9-10 | ✅ | plan3 + plan5 changes |
 | #11+ | ✅ | plan6-8 + package rename + Sentry |
+| Release AAB #1 | ❌ | R8 minification crash (Play Core classes missing) |
+| Release AAB #2 | ✅ | Disabled isMinifyEnabled + isShrinkResources |

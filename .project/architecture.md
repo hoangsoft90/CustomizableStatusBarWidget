@@ -181,3 +181,20 @@ RewardState({
 ### Share Service
 - Render clock preview to PNG (1080×540) with background
 - System share sheet via `share_plus`
+
+## Release Build Architecture
+
+### Signing Config (build.gradle.kts)
+- Keystore: `photoclock-release.jks`, alias `photoclock`, password `83793900`
+- Stored in GH Secret as base64 (`KEYSTORE_BASE64`)
+- At build time: decoded to `/tmp/release.jks` → used by `signingConfigs.release`
+- R8 disabled: `isMinifyEnabled = false`, `isShrinkResources = false`
+
+### Workflows
+| Workflow | File | Trigger | Output |
+|----------|------|---------|--------|
+| Debug APK | `build-debug-apk.yml` | push to main | `app-debug.apk` (unsigned) |
+| Release AAB | `build-release-aab.yml` | push to main | `app-release.aab` (signed) |
+
+### Proguard Rules
+`proguard-rules.pro` referenced in build.gradle.kts but R8 is disabled — rules are a safety net for future re-enablement.

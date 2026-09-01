@@ -50,11 +50,16 @@
 28. **targetSdk = 36.** Google Play requirement từ 31/8/2026.
 29. **Core library desugaring enabled.** Required by `flutter_local_notifications`.
 30. **XML entities.** `&` trong AndroidManifest phải escape thành `&amp;`.
+31. **Release keystore fixed.** `photoclock-release.jks`, alias `photoclock`, pass `83793900`. KHÔNG thay đổi giữa các lần build. Lưu trong GH Secret `KEYSTORE_BASE64`.
+32. **R8 disabled for release.** `isMinifyEnabled = false`, `isShrinkResources = false`. Flutter deferred components chưa tương thích R8 → crash.
+33. **Release signing config.** `build.gradle.kts` đọc từ env vars: `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`. Decode base64 →写入 /tmp/release.jks tại build time.
+34. **Two workflows.** `build-debug-apk.yml` (debug, unsigned) + `build-release-aab.yml` (release, signed). Cả 2 trigger on push to main.
 
 ## Naming Rules
 
-31. **Package ID:** `io.photoclock.widget` (đã đổi từ `com.example.date_time_widget`).
-32. **SharedPreferences keys:** `clock_config`, `reward_state`, `notification_enabled`, `floatingBarEnabled`, `widget_background/bg_bitmap_path`, `status_bar_config/clock_config`.
-33. **MethodChannel names:** `io.photoclock.widget/<service>` (widgets, notification, floating_bar, deep_link).
-34. **Notification channels:** `date_time_icon` (notif), `floating_bar` (overlay).
-35. **Sentry DSN:** `https://804452b03a096aa2c383654938dd213c@o4505474077753344.ingest.us.sentry.io/4512003956015104`
+35. **Package ID:** `io.photoclock.widget` (đã đổi từ `com.example.date_time_widget`).
+36. **SharedPreferences keys:** `clock_config`, `reward_state`, `notification_enabled`, `floatingBarEnabled`, `widget_background/bg_bitmap_path`, `status_bar_config/clock_config`.
+37. **MethodChannel names:** `io.photoclock.widget/<service>` (widgets, notification, floating_bar, deep_link).
+38. **Notification channels:** `date_time_icon` (notif), `floating_bar` (overlay).
+39. **Sentry DSN:** `https://804452b03a096aa2c383654938dd213c@o4505474077753344.ingest.us.sentry.io/4512003956015104`
+40. **GH Secrets:** `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD` — keystore release signing.

@@ -10,9 +10,9 @@ Centralizes app-wide constants: AdMob ad unit IDs (test vs production), IAP prod
 
 `AppConstants.enableAds` is a compile-time `const bool`. When `false`, all ads are completely disabled — no `MobileAds.init()`, no banner load, no rewarded preload, no unlock dialog. When `true`, ads are active and `testAds` determines which ad unit IDs to use.
 
-**Scenario: Ads disabled by default**
+**Scenario: Ads enabled by default (production)**
 - Given no code change
-- Then `AppConstants.enableAds == false`
+- Then `AppConstants.enableAds == true`
 - Reference: `lib/utils/constants.dart:10`
 
 **Scenario: Enable ads**

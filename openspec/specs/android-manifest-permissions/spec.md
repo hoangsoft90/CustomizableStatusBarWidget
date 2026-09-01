@@ -75,7 +75,7 @@ Declares all required Android permissions, components (activities, receivers, se
 
 ### R6: AdMob Application ID
 
-`<meta-data android:name="com.google.android.gms.ads.APPLICATION_ID">` with test value `ca-app-pub-3940256099942544~3347511713`.
+`<meta-data android:name="com.google.android.gms.ads.APPLICATION_ID">` with production value `ca-app-pub-6917313063209470~7222928557`.
 
 **Scenario: AdMob ID present**
 - Given the app starts

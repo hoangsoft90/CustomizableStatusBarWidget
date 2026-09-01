@@ -6,12 +6,14 @@
 
 **Version:** 1.0.0+1 (chưa release)
 **Package ID:** `io.photoclock.widget`
-**Build:** GitHub Actions ✅ passing
+**Build:** GitHub Actions ✅ passing (Debug APK + Release AAB)
 **Tests:** 91/91 pass ✅
 **OpenSpec:** 42 specs
 **Ads:** Production IDs, `enableAds=true`, `testAds=false`
 **Sentry:** Enabled (error tracking)
 **Privacy Policy:** https://all-my-apps-5d52f.web.app/privacy.html
+**Release Keystore:** `photoclock-release.jks` in GH Secret ✅
+**GH Secrets:** 4 keystore secrets set ✅
 
 ## Đã Hoàn Thành
 
@@ -28,6 +30,12 @@
 - [2026-09-01] **Sentry integration** — `sentry_flutter ^9.28.0` + DSN in main.dart
 - [2026-09-01] **.project/ Knowledge Items** — ai-rules, README, architecture, state, patterns all updated
 - [2026-09-01] **working.md** — Updated with full session progress
+- [2026-09-01] **Release keystore** — `photoclock-release.jks`, alias `photoclock`, pass `83793900`, RSA 2048-bit, valid 10000 days
+- [2026-09-01] **GH Secrets** — 4 secrets created: KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD
+- [2026-09-01] **Release AAB workflow** — `.github/workflows/build-release-aab.yml` with signed keystore
+- [2026-09-01] **build.gradle.kts** — Added release signing config + proguard-rules.pro
+- [2026-09-01] **R8 fix** — Disabled isMinifyEnabled + isShrinkResources (Flutter incompatible)
+- [2026-09-01] **AdMob verified** — enableAds=true, testAds=false confirmed before AAB build
 
 ### Session 2026-08-31
 
@@ -74,7 +82,7 @@
 ## Todo — Trước Khi Release
 
 - [ ] Build debug APK trên device thật (Task 5 plan8 — smoke test 10 cases)
-- [ ] Upload keystore release signing
+- [x] Release keystore + GH Secrets — Done
 - [ ] Data Safety form trên Play Console
 - [ ] Content Rating questionnaire
 - [ ] Store listing screenshots (4 ảnh)
@@ -126,3 +134,5 @@
 | #8 | ✅ | — |
 | #9-10 | ✅ | plan3 + plan5 changes |
 | #11+ | ✅ | plan6-8 + package rename + Sentry |
+| Release AAB #1 | ❌ | R8 minification crash (Play Core classes missing) |
+| Release AAB #2 | ✅ | Disabled isMinifyEnabled + isShrinkResources |

@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photo Clock Widget — User Guide</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0f0f1a;
+            color: #e0e0e0;
+            line-height: 1.7;
+        }
+        .hero {
+            background: linear-gradient(135deg, #1A1A2E 0%, #0F3460 100%);
+            padding: 60px 20px;
+            text-align: center;
+            border-bottom: 3px solid #00BCD4;
+        }
+        .hero h1 {
+            font-size: 2.5rem;
+            color: #fff;
+            margin-bottom: 10px;
+        }
+        .hero p {
+            color: #aaa;
+            font-size: 1.1rem;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+        h2 {
+            color: #00BCD4;
+            font-size: 1.5rem;
+            margin: 40px 0 16px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #333;
+        }
+        h3 {
+            color: #fff;
+            font-size: 1.15rem;
+            margin: 24px 0 10px;
+        }
+        p, li {
+            color: #ccc;
+            margin-bottom: 10px;
+        }
+        ul, ol {
+            padding-left: 24px;
+            margin-bottom: 16px;
+        }
+        li { margin-bottom: 6px; }
+        .step {
+            background: #1a1a2e;
+            border-left: 4px solid #00BCD4;
+            padding: 16px 20px;
+            margin: 16px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .step-num {
+            display: inline-block;
+            background: #00BCD4;
+            color: #000;
+            font-weight: bold;
+            width: 28px;
+            height: 28px;
+            line-height: 28px;
+            text-align: center;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        .tip {
+            background: #16213E;
+            border: 1px solid #0F3460;
+            padding: 14px 18px;
+            border-radius: 8px;
+            margin: 16px 0;
+        }
+        .tip::before {
+            content: "💡 ";
+        }
+        .warn {
+            background: #2a1a1a;
+            border: 1px solid #5a2a2a;
+            padding: 14px 18px;
+            border-radius: 8px;
+            margin: 16px 0;
+        }
+        .warn::before {
+            content: "⚠️ ";
+        }
+        .section-icon {
+            font-size: 1.3rem;
+            margin-right: 8px;
+        }
+        code {
+            background: #222;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            color: #00BCD4;
+        }
+        footer {
+            text-align: center;
+            padding: 30px;
+            color: #666;
+            border-top: 1px solid #222;
+            margin-top: 40px;
+        }
+        a { color: #00BCD4; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+<div class="hero">
+    <h1>🕐 Photo Clock Widget</h1>
+    <p>User Guide — Make your home screen beautiful</p>
+</div>
+
+<div class="container">
+
+    <h2><span class="section-icon">📦</span> Getting Started</h2>
+
+    <div class="step">
+        <span class="step-num">1</span> <strong>Install</strong> the app from Google Play Store.
+    </div>
+    <div class="step">
+        <span class="step-num">2</span> <strong>Long-press</strong> on your home screen → tap <strong>"Widgets"</strong>.
+    </div>
+    <div class="step">
+        <span class="step-num">3</span> Find <strong>"Photo Clock Widget"</strong> → choose a size (2×1, 3×1, 4×1, or 4×2) → drag it to your home screen.
+    </div>
+    <div class="step">
+        <span class="step-num">4</span> The <strong>Editor</strong> opens automatically. Customize your widget, then tap <strong>Save</strong>.
+    </div>
+
+    <div class="tip">The 4×2 widget shows the most information (day + date + time). The 2×1 is the most compact.</div>
+
+    <h2><span class="section-icon">🎨</span> Customizing Your Widget</h2>
+
+    <h3>Background</h3>
+    <ul>
+        <li><strong>None</strong> — transparent, shows your wallpaper</li>
+        <li><strong>Solid</strong> — pick any color from the palette</li>
+        <li><strong>Gradient</strong> — choose two colors for a smooth gradient</li>
+        <li><strong>Image</strong> — pick a photo from your gallery, then pinch-to-zoom to crop</li>
+    </ul>
+
+    <h3>Clock Settings</h3>
+    <ul>
+        <li><strong>Time Format</strong> — 12-hour (10:15 AM) or 24-hour (10:15)</li>
+        <li><strong>Date Format</strong> — choose from 9 formats (e.g., "Sun 30 Aug", "30/08/2026")</li>
+        <li><strong>Show Seconds</strong> — toggle seconds display</li>
+        <li><strong>Show Date</strong> — toggle date line</li>
+        <li><strong>Show Day</strong> — toggle day of week</li>
+    </ul>
+
+    <h3>Style</h3>
+    <ul>
+        <li><strong>Font Size</strong> — slider from small to large</li>
+        <li><strong>Text Color</strong> — 12 preset colors or pick your own</li>
+        <li><strong>Alignment</strong> — left, center, or right</li>
+    </ul>
+
+    <h3>Image Adjustments (when using photo background)</h3>
+    <ul>
+        <li><strong>Overlay</strong> — None / Dark / Light — helps text readability</li>
+        <li><strong>Overlay Opacity</strong> — 0% to 70%</li>
+        <li><strong>Blur</strong> — blur the background image</li>
+        <li><strong>Text Shadow</strong> — adds shadow for better readability</li>
+    </ul>
+
+    <h2><span class="section-icon">⭐</span> Presets</h2>
+    <p>Don't want to tweak every setting? Use a preset:</p>
+    <ol>
+        <li>Open the app → tap <strong>"Presets"</strong></li>
+        <li>Browse 8 curated styles: Classic, Modern, Minimal, Bold, Neon, Sunset, Ocean, Mono</li>
+        <li>Tap one to apply it instantly</li>
+    </ol>
+
+    <div class="tip">Some presets are premium. Watch a short ad to unlock them for the day, or purchase "Remove Ads" to unlock everything permanently.</div>
+
+    <h2><span class="section-icon">🖼️</span> My Designs</h2>
+    <p>Save your favorite combinations as reusable designs:</p>
+    <ol>
+        <li>From the home screen, tap <strong>"My Designs"</strong></li>
+        <li>Tap <strong>"+"</strong> to create a new design</li>
+        <li>Customize in the Editor → tap <strong>Save</strong></li>
+        <li>Give it a name → it's saved!</li>
+    </ol>
+    <p>You can save up to <strong>3 designs</strong> for free. Long-press a design to Apply, Rename, Delete, or Share.</p>
+
+    <h2><span class="section-icon">🔔</span> Notification Bar Date</h2>
+    <p>Show today's date as a persistent icon in your notification bar:</p>
+    <ol>
+        <li>Open the app → tap <strong>"Enable Notification"</strong></li>
+        <li>Grant notification permission when prompted</li>
+        <li>The date icon appears in your notification bar</li>
+    </ol>
+
+    <div class="warn">On Android 13+, you need to grant "Notifications" permission. The app will guide you through this.</div>
+
+    <h2><span class="section-icon">📱</span> Floating Bar</h2>
+    <p>A small time/date bar that floats below your status bar, visible across all apps:</p>
+    <ol>
+        <li>Open the app → tap <strong>"Enable Floating Bar"</strong></li>
+        <li>Grant "Display over other apps" permission</li>
+        <li>The floating bar appears below your status bar</li>
+    </ol>
+
+    <div class="tip">The floating bar does NOT modify your status bar. It's a separate overlay that sits below it.</div>
+
+    <h2><span class="section-icon">💰</span> Free vs Premium</h2>
+
+    <table style="width:100%; border-collapse:collapse; margin:16px 0;">
+        <tr style="border-bottom:1px solid #333;">
+            <td style="padding:10px; color:#888;">Feature</td>
+            <td style="padding:10px; color:#00BCD4;">Free</td>
+            <td style="padding:10px; color:#FFD700;">Premium</td>
+        </tr>
+        <tr style="border-bottom:1px solid #222;">
+            <td style="padding:10px;">Widget customization</td>
+            <td style="padding:10px;">✅</td>
+            <td style="padding:10px;">✅</td>
+        </tr>
+        <tr style="border-bottom:1px solid #222;">
+            <td style="padding:10px;">Photo backgrounds</td>
+            <td style="padding:10px;">✅</td>
+            <td style="padding:10px;">✅</td>
+        </tr>
+        <tr style="border-bottom:1px solid #222;">
+            <td style="padding:10px;">Free presets (5)</td>
+            <td style="padding:10px;">✅</td>
+            <td style="padding:10px;">✅</td>
+        </tr>
+        <tr style="border-bottom:1px solid #222;">
+            <td style="padding:10px;">Premium presets (3)</td>
+            <td style="padding:10px;">Watch ad/day</td>
+            <td style="padding:10px;">✅ Always</td>
+        </tr>
+        <tr style="border-bottom:1px solid #222;">
+            <td style="padding:10px;">My Designs</td>
+            <td style="padding:10px;">3 designs</td>
+            <td style="padding:10px;">Unlimited</td>
+        </tr>
+        <tr style="border-bottom:1px solid #222;">
+            <td style="padding:10px;">Banner ads</td>
+            <td style="padding:10px;">Shown</td>
+            <td style="padding:10px;">Removed</td>
+        </tr>
+    </table>
+
+    <p>To upgrade: tap <strong>"Remove Ads"</strong> in the app → one-time purchase, no subscription.</p>
+
+    <h2><span class="section-icon">❓</span> FAQ</h2>
+
+    <h3>Widget disappeared after reboot?</h3>
+    <p>The widget should persist. If it doesn't, re-add it from the Widgets menu. Your settings are saved automatically.</p>
+
+    <h3>Widget background is black?</h3>
+    <p>Open the app → Editor → set a background (Solid, Gradient, or Image) → Save. The widget will update within seconds.</p>
+
+    <h3>Floating bar not showing?</h3>
+    <p>Check that "Display over other apps" permission is granted. On Android 15+, the app must be open at least once after reboot.</p>
+
+    <h3>How to change widget size?</h3>
+    <p>Long-press the widget on your home screen → drag the resize handles. The widget layout adjusts automatically.</p>
+
+    <h3>Notification icon not showing date?</h3>
+    <p>The notification icon is a small date indicator. For full date/time, use the widget or floating bar.</p>
+
+    <h2><span class="section-icon">📞</span> Support</h2>
+    <p>Have questions or issues? Contact us:</p>
+    <ul>
+        <li>Email: <a href="mailto:haibasoftware@gmail.com">haibasoftware@gmail.com</a></li>
+        <li>Privacy Policy: <a href="https://hoangsoft90.github.io/CustomizableStatusBarWidget/">View Privacy Policy</a></li>
+    </ul>
+
+</div>
+
+<footer>
+    <p>Made with ❤️ for Android users who love beautiful widgets.</p>
+    <p style="margin-top:8px;">Photo Clock Widget © 2026</p>
+</footer>
+
+</body>
+</html>

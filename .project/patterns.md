@@ -127,6 +127,35 @@ TextViews use `shadowColor="#AA000000"` + `shadowDx=0` + `shadowDy=1` instead of
 
 **Why:** Clean toggle for development vs production. Prevents accidental ad calls during testing.
 
+### 10. Release Signing via GH Secrets (session)
+
+Keystore file (`photoclock-release.jks`) is base64-encoded and stored in GH Secret `KEYSTORE_BASE64`. At build time, `build.gradle.kts` decodes it to `/tmp/release.jks` and uses it to sign the AAB. Password and alias also from GH Secrets.
+
+**Why:** Avoids hardcoding keystore credentials in repo. Same keystore must be used for all releases (Play Store requirement).
+
+**Pattern:**
+```kotlin
+// build.gradle.kts
+signingConfigs {
+    create("release") {
+        val ksFile = File("/tmp/release.jks")
+        if (!ksFile.exists() && System.getenv("KEYSTORE_BASE64") != null) {
+            ksFile.writeBytes(Base64.getDecoder().decode(System.getenv("KEYSTORE_BASE64")))
+        }
+        keyAlias = System.getenv("KEY_ALIAS") ?: ""
+        keyPassword = System.getenv("KEY_PASSWORD") ?: ""
+        storeFile = ksFile
+        storePassword = System.getenv("KEYSTORE_PASSWORD") ?: ""
+    }
+}
+```
+
+### 11. R8 Disabled for Flutter Release (session)
+
+Flutter's Gradle plugin auto-enables R8 minification for release builds. R8 fails because Play Core / Flutter deferred components classes are missing. Fix: explicitly set `isMinifyEnabled = false` and `isShrinkResources = false` in the release buildType.
+
+**Why:** Flutter deferred components don't include all classes R8 needs. Until Flutter officially supports R8, it must be disabled.
+
 ## Known Technical Debt
 
 | Debt | Impact | Planned Fix |
