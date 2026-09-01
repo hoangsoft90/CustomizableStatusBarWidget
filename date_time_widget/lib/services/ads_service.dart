@@ -27,7 +27,9 @@ class AdsService {
   // ── Initialise ────────────────────────────────────────────
 
   /// Call once at app start.  Safe to call multiple times.
+  /// Skipped entirely when [AppConstants.enableAds] is `false`.
   static Future<void> init() async {
+    if (!AppConstants.enableAds) return;
     await MobileAds.instance.initialize();
   }
 
@@ -35,7 +37,9 @@ class AdsService {
 
   /// Create an adaptive banner [AdWidget].  Caller is responsible for
   /// placing it in the widget tree and calling `dispose()` when done.
-  BannerAd createBanner() {
+  /// Returns `null` when ads are disabled.
+  BannerAd? createBanner() {
+    if (!AppConstants.enableAds) return null;
     return BannerAd(
       adUnitId: AppConstants.bannerAdUnitId,
       size: AdSize.banner,
@@ -49,8 +53,9 @@ class AdsService {
     )..load();
   }
 
-  /// Whether banners should be shown (premium users see no ads).
-  bool get showBanners => !_isPremium;
+  /// Whether banners should be shown (premium users see no ads,
+  /// ads disabled, or no config).
+  bool get showBanners => AppConstants.enableAds && !_isPremium;
 
   // ── Rewarded ──────────────────────────────────────────────
 
@@ -58,6 +63,7 @@ class AdsService {
 
   /// Pre-load a rewarded ad so it's ready when the user taps "Watch".
   Future<void> preloadRewarded() async {
+    if (!AppConstants.enableAds) return;
     if (_isPremium) return;
     // Don't preload if no remaining unlocks
     if (_reward.remainingUnlocksToday() <= 0) return;
@@ -83,6 +89,7 @@ class AdsService {
   /// If no ad is loaded yet, attempts to load and show in one step.
   /// If [isPremium], returns `false` immediately (no ads shown).
   Future<bool> showRewardedAd() async {
+    if (!AppConstants.enableAds) return false;
     if (_isPremium) return false;
 
     final ad = _rewardedAd;

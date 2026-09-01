@@ -1,12 +1,18 @@
 /// App-wide constants and configuration.
 ///
-/// Set [testAds] to `true` during development to use AdMob test IDs.
-/// Set to `false` ONLY when publishing to Play Store with live ad unit IDs.
+/// Ad flags:
+/// - [enableAds]: master switch — `false` = no ads anywhere in the app.
+/// - [testAds]: `true` = AdMob test IDs (dev), `false` = production IDs.
+/// When [enableAds] is `false`, [testAds] is ignored.
 class AppConstants {
-  // ── Ad Mode ──────────────────────────────────────────────
-  /// When `true`, uses AdMob test ad unit IDs.
-  /// When `false`, uses production ad unit IDs (must be set before release).
-  static const bool testAds = true;
+  // ── Ad Flags ─────────────────────────────────────────────
+  /// Master switch for all ads. Set `false` to disable completely.
+  static const bool enableAds = false;
+
+  /// When `true`, uses AdMob test ad unit IDs (safe for dev).
+  /// When `false`, uses production ad unit IDs.
+  /// Ignored when [enableAds] is `false`.
+  static const bool testAds = false;
 
   // ── Ad Unit IDs — Test (dev only) ────────────────────────
   // https://developers.google.com/admob/android/test-ads
@@ -15,14 +21,16 @@ class AppConstants {
   static const String _testInterstitialId = 'ca-app-pub-3940256099942544/1033173712';
   static const String _testAppOpenId = 'ca-app-pub-3940256099942544/9257395921';
 
-  // ── Ad Unit IDs — Production (set before release) ────────
-  // TODO: Replace these with your actual AdMob ad unit IDs before publishing
-  static const String _prodBannerId = 'ca-app-pub-XXXXXXXXXXXXXXXX/XXXXXXXXXX';
-  static const String _prodRewardedId = 'ca-app-pub-XXXXXXXXXXXXXXXX/XXXXXXXXXX';
-  static const String _prodInterstitialId = 'ca-app-pub-XXXXXXXXXXXXXXXX/XXXXXXXXXX';
-  static const String _prodAppOpenId = 'ca-app-pub-XXXXXXXXXXXXXXXX/XXXXXXXXXX';
+  // ── Ad Unit IDs — Production ─────────────────────────────
+  static const String _prodBannerId = 'ca-app-pub-6917313063209470/1100373335';
+  static const String _prodRewardedId = 'ca-app-pub-6917313063209470/5224354917';
+  static const String _prodInterstitialId = 'ca-app-pub-6917313063209470/6447963584';
+  static const String _prodAppOpenId = 'ca-app-pub-6917313063209470/XXXXXXXXXX';
 
   // ── Public getters ───────────────────────────────────────
+  /// Returns `false` if ads are disabled, otherwise respects testAds flag.
+  static bool get adsEnabled => enableAds;
+
   static String get bannerAdUnitId => testAds ? _testBannerId : _prodBannerId;
   static String get rewardedAdUnitId => testAds ? _testRewardedId : _prodRewardedId;
   static String get interstitialAdUnitId => testAds ? _testInterstitialId : _prodInterstitialId;

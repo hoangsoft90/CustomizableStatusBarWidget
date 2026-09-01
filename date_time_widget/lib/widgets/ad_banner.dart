@@ -40,6 +40,7 @@ class _AdBannerState extends State<AdBanner> {
   }
 
   void _loadAd() {
+    if (!AppConstants.enableAds) return;
     final ad = BannerAd(
       adUnitId: AppConstants.bannerAdUnitId,
       size: AdSize.banner,

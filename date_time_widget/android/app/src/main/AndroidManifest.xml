@@ -72,7 +72,7 @@
         <!-- AdMob Application ID (required — crashes without this) -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3940256099942544~3347511713" />
+            android:value="ca-app-pub-6917313063209470~7222928557" />
 
         <!-- FileProvider for widget background bitmap URIs -->
         <provider
