@@ -226,10 +226,11 @@ Hiển thị: Notification shade đang mở
 ## 4. App Content Checklist
 
 ### ✅ Privacy Policy
-- [x] URL: `https://hoangsoft90.github.io/CustomizableStatusBarWidget/`
+- [x] URL: `https://hoangsoft90.github.io/CustomizableStatusBarWidget/privacy.html`
 - [x] Đã host trên GitHub Pages (gh-pages branch)
-- [x] Bao gồm: data collection, ads, IAP, third-party services
+- [x] Bao gồm: App Name, Package Name, Developer Name, data collection, ads, IAP, third-party services
 - [x] Email liên hệ: haibasoftware@gmail.com
+- [x] Developer: Hai Bass Software
 
 ### ✅ Data Safety
 - [x] Khai báo AdMob collects: Device ID, App activity, Device info
@@ -307,7 +308,7 @@ Hiển thị: Notification shade đang mở
 | **Package** | `io.photoclock.widget` |
 | **Min SDK** | 21 (Android 5.0) |
 | **Target SDK** | 36 (Android 16) |
-| **Privacy Policy** | `https://hoangsoft90.github.io/CustomizableStatusBarWidget/` |
+| **Privacy Policy** | `https://hoangsoft90.github.io/CustomizableStatusBarWidget/privacy.html` |
 | **app-ads.txt** | `https://all-my-apps-5d52f.web.app/app-ads.txt` |
 | **Publisher ID** | `pub-6917313063209470` |
 | **Support Email** | haibasoftware@gmail.com |
