@@ -153,7 +153,9 @@ class _EditorScreenState extends State<EditorScreen> {
         background: _savedBackground,
       ));
     }
-  }  Future<void> _save() async {
+  }
+
+  Future<void> _save() async {
     setState(() => _isSaving = true);
     try {
       _savedConfig = _config;

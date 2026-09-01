@@ -219,6 +219,7 @@ class DateTimeWidgetProvider : AppWidgetProvider() {
                                 (bitmap.height * scale).toInt(),
                                 true
                             )
+                            // Always recycle the decoded bitmap if scaled is a new instance
                             if (scaled !== bitmap) bitmap.recycle()
                             scaled
                         } else {
