@@ -11,9 +11,16 @@ import '../models/widget_design.dart';
 /// Plan5 §3: "max cạnh 1600px".
 const int maxSourceDimension = 1600;
 
-/// Maximum dimension for baked widget bitmaps.
-/// Plan5 §2.3: "trần tuyệt đối 480x480px cho size lớn nhất (4x2)".
+/// Absolute ceiling for generic resizing helpers (see [resizeForWidget]).
+/// Plan9: the widget-background bake path no longer uses this — it uses
+/// [kWidgetBgBakeWidth]/[kWidgetBgBakeHeight] (360×160, Binder-safe).
 const int maxBakedDimension = 480;
+
+/// Baked widget-background size pushed to native widgets.
+/// Plan9: raw ARGB must stay well under the RemoteViews/Binder limit
+/// (~1 MB) — 360×160×4 ≈ 230 KB is a safe budget.
+const int kWidgetBgBakeWidth = 360;
+const int kWidgetBgBakeHeight = 160;
 
 /// Utility for copying and resizing images for widget designs.
 ///

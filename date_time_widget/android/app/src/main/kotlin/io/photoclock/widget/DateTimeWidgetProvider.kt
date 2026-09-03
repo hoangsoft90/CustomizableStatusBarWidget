@@ -79,6 +79,20 @@ class DateTimeWidgetProvider : AppWidgetProvider() {
             mgr: AppWidgetManager,
             widgetId: Int,
         ) {
+            // Plan9: outer guard — any failure while building/updating this widget
+            // instance must not crash the widget host or abort the onUpdate loop.
+            try {
+                renderWidgetInner(context, mgr, widgetId)
+            } catch (e: Exception) {
+                Log.e("DateTimeWidget", "renderWidget failed id=$widgetId", e)
+            }
+        }
+
+        private fun renderWidgetInner(
+            context: Context,
+            mgr: AppWidgetManager,
+            widgetId: Int,
+        ) {
             val config = readConfig(context)
             val layoutId = chooseLayout(context, widgetId, mgr)
             val views = RemoteViews(context.packageName, layoutId)
@@ -123,7 +137,12 @@ class DateTimeWidgetProvider : AppWidgetProvider() {
                 views.setOnClickPendingIntent(R.id.widget_time, pi)
             }
 
-            mgr.updateAppWidget(widgetId, views)
+            // Plan9: never let a widget-host transaction failure kill the process.
+            try {
+                mgr.updateAppWidget(widgetId, views)
+            } catch (e: Exception) {
+                Log.e("DateTimeWidget", "updateAppWidget failed id=$widgetId", e)
+            }
         }
 
         /** Pick layout based on widget cell size. */
@@ -204,19 +223,23 @@ class DateTimeWidgetProvider : AppWidgetProvider() {
                     // Decode bitmap with inSampleSize to avoid OOM on large files
                     val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
                     BitmapFactory.decodeFile(bgPath, opts)
-                    val sampleSize = calculateInSampleSize(opts, 800, 800)
+                    val sampleSize = calculateInSampleSize(opts, 400, 400)
                     val decodeOpts = BitmapFactory.Options().apply { inSampleSize = sampleSize }
                     val bitmap = BitmapFactory.decodeFile(bgPath, decodeOpts)
 
                     if (bitmap != null) {
-                        // Scale down if longest edge > 800px
+                        // Plan9: Binder budget — raw ARGB must stay well under ~1 MB.
+                        // Scale down if longest edge > 400px, then enforce a hard
+                        // cap of ~400 KB raw (width×height×4) so RemoteViews never
+                        // trips TransactionTooLargeException on the widget host.
                         val maxSide = maxOf(bitmap.width, bitmap.height)
-                        val finalBitmap = if (maxSide > 800) {
-                            val scale = 800f / maxSide
+                        var bmp = if (maxSide > 400) {
+                            val scale = 400f / maxSide
+                            // Clamp to >= 1px — a 0-dimension Bitmap throws.
                             val scaled = Bitmap.createScaledBitmap(
                                 bitmap,
-                                (bitmap.width * scale).toInt(),
-                                (bitmap.height * scale).toInt(),
+                                (bitmap.width * scale).toInt().coerceAtLeast(1),
+                                (bitmap.height * scale).toInt().coerceAtLeast(1),
                                 true
                             )
                             // Always recycle the decoded bitmap if scaled is a new instance
@@ -226,7 +249,16 @@ class DateTimeWidgetProvider : AppWidgetProvider() {
                             bitmap
                         }
 
-                        views.setImageViewBitmap(R.id.widget_background, finalBitmap)
+                        // Hard cap ~400 KB raw — scale down in 85% steps if needed.
+                        while (bmp.width.toLong() * bmp.height * 4 > 400_000L) {
+                            val nw = (bmp.width * 0.85f).toInt().coerceAtLeast(1)
+                            val nh = (bmp.height * 0.85f).toInt().coerceAtLeast(1)
+                            val next = Bitmap.createScaledBitmap(bmp, nw, nh, true)
+                            if (next !== bmp) bmp.recycle()
+                            bmp = next
+                        }
+
+                        views.setImageViewBitmap(R.id.widget_background, bmp)
                         views.setViewVisibility(R.id.widget_background, android.view.View.VISIBLE)
                         return
                     }

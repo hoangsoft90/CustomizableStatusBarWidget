@@ -211,11 +211,11 @@ class _EditorScreenState extends State<EditorScreen> {
         return;
       }
 
-      // Bake background at max widget size (480×480)
+      // Bake background at a Binder-safe size (Plan9: no more 480×480).
       final bitmapBytes = await ImageUtils.bakeBackgroundBitmap(
         background: _background,
-        width: 480,
-        height: 480,
+        width: kWidgetBgBakeWidth,
+        height: kWidgetBgBakeHeight,
       );
       if (bitmapBytes == null) {
         // Bake returned null (e.g. missing image) — clear bitmap

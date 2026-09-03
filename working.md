@@ -1,6 +1,21 @@
 # Working — Date & Time Widget
 
-> Cập nhật lần cuối: 2026-09-01
+> Cập nhật lần cuối: 2026-09-03
+
+## Đã Hoàn Thành
+
+### Session 2026-09-03
+
+- [2026-09-03] **plan9_final.md** — Task 1: Flutter bake 480×480 → 360×160 (`kWidgetBgBakeWidth/Height` trong image_utils.dart; editor_screen + home_screen)
+- [2026-09-03] **plan9_final.md** — Task 2: Native decode cap 800 → 400px + hard cap ~400KB raw (`DateTimeWidgetProvider.kt`), giữ `setImageViewBitmap`, không URI/systemui
+- [2026-09-03] **plan9_final.md** — Task 3: try/catch quanh `updateAppWidget` + outer guard `renderWidgetInner` (không crash widget host)
+- [2026-09-03] **plan9_final.md** — Task 4: Audit 4 XML widget — chỉ FrameLayout/LinearLayout/ImageView/TextView (PASS, không cần sửa)
+- [2026-09-03] **plan9_final.md** — Task 5: home_screen bake `catch (_) {}` → debugPrint + SnackBar
+- [2026-09-03] **plan9_final.md** — Task 6: `flutter analyze` sạch + 91/91 tests pass; native compile KHÔNG chạy được trên máy này (thiếu Android SDK platforms + hết dung lượng ~/.gradle) — cần verify trên máy có SDK/device
+
+---
+
+## Trạng Thái Hiện Tại (trước plan9 — giữ để đối chiếu)
 
 ## Trạng Thái Hiện Tại
 

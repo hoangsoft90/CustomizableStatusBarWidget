@@ -142,8 +142,8 @@ class HomeScreenState extends State<HomeScreen> {
 
       final bitmapBytes = await ImageUtils.bakeBackgroundBitmap(
         background: bg,
-        width: 480,
-        height: 480,
+        width: kWidgetBgBakeWidth,
+        height: kWidgetBgBakeHeight,
       );
       if (bitmapBytes == null) return;
 
@@ -172,8 +172,14 @@ class HomeScreenState extends State<HomeScreen> {
           bitmapPath: bgFile.path,
         );
       }
-    } catch (_) {
-      // Best-effort
+    } catch (e, st) {
+      // Plan9: don't swallow bake failures silently — log + inform the user.
+      debugPrint('home bakeAndSetWidgetBackground failed: $e\n$st');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Could not update widget background')),
+        );
+      }
     }
   }
 
