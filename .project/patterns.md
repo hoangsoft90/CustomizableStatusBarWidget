@@ -86,11 +86,11 @@ Each of the 3 native Kotlin files (`DateTimeWidgetProvider`, `NotificationIconSe
 | **State management library** | Overkill for this app size |
 | **Code generation for JSON** | Adds build complexity, not needed |
 
-### 6. Bitmap Background Pipeline (plan5-8)
+### 6. Bitmap Background Pipeline (plan5-9)
 
-Editor bakes bitmap per-widget-size → saves to `widget_bg/bg_{millis}.png` → MethodChannel to native → native decodes with `inSampleSize` + 800px cap → `setImageViewBitmap` on RemoteViews.
+Editor bakes bitmap dùng chung 360×160 (constants `kWidgetBgBakeWidth/Height` — KHÔNG còn 480×480) → saves to `widget_bg/bg_{millis}.png` → MethodChannel to native → native decodes with `inSampleSize` + 400px max side + hard cap ~400KB raw → `setImageViewBitmap` on RemoteViews.
 
-**Why:** `setImageViewUri` + FileProvider caused Binder IPC issues. `setImageViewBitmap` with controlled size is safer.
+**Why:** `setImageViewUri` + FileProvider caused Binder IPC issues. `setImageViewBitmap` with controlled size is safer. Plan9 siết budget (400px + ~400KB raw) vì bản 480/800px có thể vượt Binder transaction limit → TransactionTooLargeException crash widget host (lỗi Play thực tế).
 
 **Pattern:**
 ```dart
@@ -100,13 +100,27 @@ final file = await saveBakedBitmap(bitmap, widgetId);
 WidgetBridge.setWidgetBackground(widgetId, file.path);
 ```
 ```kotlin
-// Native: decode + downsample
+// Native: decode + downsample (plan9: 400px max side + hard cap ~400KB raw)
 val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
 BitmapFactory.decodeFile(bgPath, opts)
-opts.inSampleSize = calculateInSampleSize(opts, 800, 800)
+opts.inSampleSize = calculateInSampleSize(opts, 400, 400)
 opts.inJustDecodeBounds = false
 val bitmap = BitmapFactory.decodeFile(bgPath, opts)
-views.setImageViewBitmap(R.id.widget_background, bitmap)
+var bmp = if (maxOf(bitmap.width, bitmap.height) > 400) {
+    val scale = 400f / maxOf(bitmap.width, bitmap.height)
+    Bitmap.createScaledBitmap(bitmap,
+        (bitmap.width * scale).toInt().coerceAtLeast(1),   // clamp >= 1px
+        (bitmap.height * scale).toInt().coerceAtLeast(1), true)
+} else bitmap
+// Hard cap ~400KB raw — scale 85%/step cho tới khi dưới budget
+while (bmp.width.toLong() * bmp.height * 4 > 400_000L) {
+    val next = Bitmap.createScaledBitmap(bmp,
+        (bmp.width * 0.85f).toInt().coerceAtLeast(1),
+        (bmp.height * 0.85f).toInt().coerceAtLeast(1), true)
+    if (next !== bmp) bmp.recycle()
+    bmp = next
+}
+views.setImageViewBitmap(R.id.widget_background, bmp)
 ```
 
 ### 7. Cache-Busting via Timestamp (plan7)

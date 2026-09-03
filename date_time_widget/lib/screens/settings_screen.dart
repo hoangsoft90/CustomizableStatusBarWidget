@@ -9,6 +9,7 @@ import '../services/ads_service.dart';
 import '../services/iap_service.dart';
 import '../services/storage_service.dart';
 import '../services/widget_bridge.dart';
+import '../utils/constants.dart';
 import '../widgets/ad_banner.dart';
 
 /// Settings screen with IAP "Remove Ads & Unlock All".
@@ -195,7 +196,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: ListTile(
                     leading: const Icon(Icons.info_outline),
                     title: const Text('About'),
-                    subtitle: const Text('Date & Time Widget v1.0.0'),
+                    subtitle: Text('${AppConstants.appName} v${AppConstants.appVersion}'),
                   ),
                 ),
               ],

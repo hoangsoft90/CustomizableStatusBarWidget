@@ -54,20 +54,20 @@ Native: MainActivity receives JSON
   → FloatingBarService.saveConfig() → update()
 ```
 
-## Background Bitmap Flow (plan5-8)
+## Background Bitmap Flow (plan5-9)
 
 ```
 User picks image in Editor
   → ImageUtils.copyAndResizeSource() (max 1600px)
   → CropScreen for zoom+pan
-  → bakeBackgroundBitmap() (per-widget size, max 480px)
+  → bakeBackgroundBitmap() (dùng chung, 360×160 — kWidgetBgBakeWidth/Height)
   → Save to app documents/widget_bg/bg_{millis}.png
   → WidgetBridge.setWidgetBackground(widgetId, bitmapPath)
        ↓ MethodChannel
 Native: MainActivity receives path
   → SharedPreferences("widget_background", key="bg_bitmap_path")
   → DateTimeWidgetProvider.renderWidget() → applyWidgetBackground()
-  → BitmapFactory.decodeFile() + inSampleSize + 800px cap
+  → BitmapFactory.decodeFile() + inSampleSize + 400px max side + hard cap ~400KB raw
   → RemoteViews.setImageViewBitmap()
 ```
 
@@ -142,7 +142,8 @@ RewardState({
 - All use `FrameLayout` root with `ImageView#widget_background` + text shadow
 - Reads config from `"status_bar_config"` SharedPreferences
 - Reads bitmap path from `"widget_background"` SharedPreferences
-- `applyWidgetBackground()`: BitmapFactory.decodeFile + inSampleSize + 800px cap + setImageViewBitmap
+- `applyWidgetBackground()`: BitmapFactory.decodeFile + inSampleSize + 400px max side + hard cap ~400KB raw (vòng scale 85%) + setImageViewBitmap
+- `renderWidget()` bọc guard try/catch → `renderWidgetInner()`; mọi `mgr.updateAppWidget()` bọc try/catch riêng — fail không crash widget host
 - `onAppWidgetOptionsChanged()`: re-renders WITHOUT clearing background
 - Updates via `TimeTickService` (ACTION_TIME_TICK) or MethodChannel
 

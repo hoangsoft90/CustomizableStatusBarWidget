@@ -25,6 +25,7 @@ import java.util.Locale
 class DateTimeWidgetProvider : AppWidgetProvider() {
 
     companion object {
+        private const val TAG = "DateTimeWidgetProvider"
         private const val CONFIG_PREFS = "status_bar_config"
         private const val CONFIG_KEY = "clock_config"
 
@@ -84,7 +85,7 @@ class DateTimeWidgetProvider : AppWidgetProvider() {
             try {
                 renderWidgetInner(context, mgr, widgetId)
             } catch (e: Exception) {
-                Log.e("DateTimeWidget", "renderWidget failed id=$widgetId", e)
+                Log.e(TAG, "renderWidget failed id=$widgetId", e)
             }
         }
 
@@ -141,7 +142,7 @@ class DateTimeWidgetProvider : AppWidgetProvider() {
             try {
                 mgr.updateAppWidget(widgetId, views)
             } catch (e: Exception) {
-                Log.e("DateTimeWidget", "updateAppWidget failed id=$widgetId", e)
+                Log.e(TAG, "Failed to update app widget $widgetId", e)
             }
         }
 
@@ -263,7 +264,7 @@ class DateTimeWidgetProvider : AppWidgetProvider() {
                         return
                     }
                 } catch (e: Exception) {
-                    Log.e("WidgetBg", "applyWidgetBackground failed", e)
+                    Log.e(TAG, "applyWidgetBackground failed", e)
                 }
             }
 

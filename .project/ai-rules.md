@@ -24,9 +24,10 @@
 14. **TimeTickService uses ACTION_TIME_TICK.** KHÔNG dùng AlarmManager/Handler cho tick.
 15. **BootReceiver restarts services.** Kiểm tra `isEnabled()` trước khi start.
 
-## Widget Background Rules (plan6-8)
+## Widget Background Rules (plan6-9)
 
-16. **Bitmap thay vì URI.** Dùng `setImageViewBitmap` + `inSampleSize` + 800px cap. KHÔNG dùng `setImageViewUri` + `FileProvider` (plan8 quyết định).
+16. **Bitmap thay vì URI + Binder budget (plan9).** Dùng `setImageViewBitmap` + `inSampleSize` + **400px max side** + **hard cap ~400KB raw** (vòng scale 85% khi width×height×4 > 400_000). KHÔNG dùng `setImageViewUri` + `FileProvider`. Đừng quay lại 480/800 — TransactionTooLargeException crash widget host (plan9).
+16b. **Mọi dimension scale phải `coerceAtLeast(1)`.** Ảnh méo cực hiếm (width=1) có thể ra 0-dim → `createScaledBitmap` throw. Clamp cả 2 chiều ở cả nhánh scale lẫn vòng hard-cap.
 17. **Resize KHÔNG xóa background.** `onAppWidgetOptionsChanged` chỉ gọi `renderWidget()`, KHÔNG remove SharedPreferences key.
 18. **Text shadow thay vì overlay.** `shadowColor="#AA000000"` trên TextViews, KHÔNG dùng `#59000000` overlay trên LinearLayout.
 19. **Cache-busting bằng timestamp.** Filename `bg_{millis}.png`, cleanup file cũ best-effort.
@@ -63,3 +64,8 @@
 38. **Notification channels:** `date_time_icon` (notif), `floating_bar` (overlay).
 39. **Sentry DSN:** `https://804452b03a096aa2c383654938dd213c@o4505474077753344.ingest.us.sentry.io/4512003956015104`
 40. **GH Secrets:** `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD` — keystore release signing.
+
+## Widget Host Crash Rules (plan9 P0)
+
+41. **IPC guard cho widget update.** Mọi `mgr.updateAppWidget()` bọc try/catch `Log.e(TAG, ...)`; build RemoteViews cũng chạy trong guard (renderWidget → renderWidgetInner). Transaction fail KHÔNG được crash widget host / abort vòng onUpdate.
+42. **Log tag 1/file = tên class.** Native dùng `private const val TAG = "DateTimeWidgetProvider"` + `Log.e(TAG, ...)`. KHÔNG dùng nhiều tag chuỗi cứng khác nhau trong cùng file (logcat lọc 1 tag là đủ).

@@ -41,5 +41,5 @@ class AppConstants {
 
   // ── App Info ─────────────────────────────────────────────
   static const String appName = 'Date & Time Widget';
-  static const String appVersion = '1.0.0';
+  static const String appVersion = '1.0.1';
 }

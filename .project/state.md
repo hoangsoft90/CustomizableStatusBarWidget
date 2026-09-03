@@ -34,6 +34,8 @@
 | **GH Secrets (keystore)** | ✅ Done | 4 secrets: KEYSTORE_BASE64, KEYSTORE_PASSWORD, KEY_ALIAS, KEY_PASSWORD |
 | **R8 fix** | ✅ Done | Disabled isMinifyEnabled + isShrinkResources (Flutter incompatible) |
 | **AdMob verified** | ✅ Done | enableAds=true, testAds=false confirmed before AAB build |
+| **plan9_final.md** — Task 1-6 | ✅ Done | Play widget crash fix: bake 360×160, native 400px cap + ~400KB hard cap, try/catch IPC guards |
+| **plan9 log tag thống nhất** | ✅ Done | `TAG = "DateTimeWidgetProvider"` dùng cho mọi Log.e trong file |
 
 ## Todo List (Remaining)
 
@@ -79,6 +81,7 @@
 | onAppWidgetOptionsChanged needs app running | Low | Known | Background lost if app killed + resize |
 | White text on white BG unreadable | Medium | Known | Text shadow helps but not sufficient for all cases |
 | appOpenAdUnitId placeholder | Low | Known | App Open ads not yet integrated |
+| Native compile chưa verify trên máy local | Medium | In progress | plan9 Kotlin thay đổi chưa compile được (thiếu Android SDK platform + hết dung lượng); chờ verify qua CI/GitHub Actions hoặc máy có SDK |
 
 ## Key Decisions Made
 
@@ -93,6 +96,8 @@
 | ACTION_TIME_TICK (not AlarmManager) | Battery efficient, OEM-friendly | plan2 #5 |
 | No ads on Widget/Notification/Overlay | Google Play policy compliance | plan1 §4 |
 | Bitmap thay vì URI/systemui (plan8) | Avoids FileProvider complexity, Binder IPC safe with 800px cap | plan8 §1 |
+| Bake 480×480 → 360×160 + native 400px cap + ~400KB hard cap (plan9) | 480/800px vượt Binder limit → TransactionTooLargeException crash widget host (Play) | plan9 §Task 1-2 |
+| IPC guard quanh updateAppWidget + renderWidget (plan9) | Transaction fail không được crash widget host / abort onUpdate loop | plan9 §Task 3 |
 | Resize giữ background (plan8) | User expects BG persists across resize | plan8 §2 |
 | Text shadow thay vì overlay (plan8) | More flexible, works on any background | plan8 §3 |
 | enableAds=true production (latest) | Real ads for monetization | Session update |

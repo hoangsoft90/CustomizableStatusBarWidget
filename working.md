@@ -12,6 +12,11 @@
 - [2026-09-03] **plan9_final.md** — Task 4: Audit 4 XML widget — chỉ FrameLayout/LinearLayout/ImageView/TextView (PASS, không cần sửa)
 - [2026-09-03] **plan9_final.md** — Task 5: home_screen bake `catch (_) {}` → debugPrint + SnackBar
 - [2026-09-03] **plan9_final.md** — Task 6: `flutter analyze` sạch + 91/91 tests pass; native compile KHÔNG chạy được trên máy này (thiếu Android SDK platforms + hết dung lượng ~/.gradle) — cần verify trên máy có SDK/device
+- [2026-09-03] **Code review plan9** — Fix bug class khó tái tạo: scale branch thiếu `coerceAtLeast(1)` (0-dim → createScaledBitmap throw) + sửa comment `maxBakedDimension` lỗi thời
+- [2026-09-03] **Push CI** — Commit `4ff7284` "Fix Play widget crash" push lên main → trigger 2 workflow (debug APK + release AAB)
+- [2026-09-03] **Log tag spec** — `DateTimeWidgetProvider.kt` L144 đổi tag/message khớp đúng snippet spec (`Log.e("DateTimeWidgetProvider", "Failed to update app widget $widgetId", e)`)
+- [2026-09-03] **TAG thống nhất** — Thêm `private const val TAG = "DateTimeWidgetProvider"` (companion object), cả 3 `Log.e` (renderWidget guard, updateAppWidget, applyWidgetBackground) dùng chung 1 TAG
+- [2026-09-03] **.project/ updated** — ai-rules (Rule 16: 400px + hard cap; mới 41-42 IPC guard + TAG 1/file), architecture (flow 360×160 + 400px), patterns (pipeline + snippet mới), state (milestones + decisions + known issue native chưa verify)
 
 ---
 
@@ -19,7 +24,7 @@
 
 ## Trạng Thái Hiện Tại
 
-**Version:** 1.0.0+1 (chưa release)
+**Version:** 1.0.1+2 (chờ build CI verify)
 **Package ID:** `io.photoclock.widget`
 **Build:** GitHub Actions ✅ passing (Debug APK + Release AAB)
 **Tests:** 91/91 pass ✅
@@ -31,6 +36,10 @@
 **GH Secrets:** 4 keystore secrets set ✅
 
 ## Đã Hoàn Thành
+
+### Session 2026-09-03 (continued)
+
+- [2026-09-03] **Version 1.0.1+2** — Bump pubspec (1.0.0+1 → 1.0.1+2), `AppConstants.appVersion` → '1.0.1', About row trong settings giờ dùng `AppConstants.appName/appVersion` (hết hardcode trôi dạt)
 
 ### Session 2026-09-01 (latest)
 
